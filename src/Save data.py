@@ -80,7 +80,3 @@ train_df.parallel_apply(lambda row: save_data(row, train_path), axis=1)
 test_path = '../data/raw/test'
 os.makedirs(test_path, exist_ok=True)
 test_df.parallel_apply(lambda row: save_data(row, test_path), axis=1)
-
-
-
-
