@@ -14,3 +14,8 @@ stackstac
 pandarallel
 ipywidgets
 load-dotenv
+ipyleaflet
+seaborn
+statsmodels
+scikit-learn
+rich
