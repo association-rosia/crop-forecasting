@@ -26,7 +26,7 @@ def bands_to_image(data, index, img_size=512):
     return image
 
 
-def save_data(row, path, history=105, resolution=20, surrounding_box=0.1, num_images=20):
+def save_data(row, path, history=120, resolution=20, surrounding_box=0.1, num_images=20):
     longitude = row['Longitude']
     latitude = row['Latitude']
     min_longitude = longitude - surrounding_box / 2
@@ -45,9 +45,9 @@ def save_data(row, path, history=105, resolution=20, surrounding_box=0.1, num_im
     catalog = pystac_client.Client.open("https://planetarycomputer.microsoft.com/api/stac/v1", modifier=pc.sign_inplace)
     search = catalog.search(collections=["sentinel-2-l2a"], bbox=bbox, datetime=time_period)
     items = search.item_collection()
-    print(f'>>> {len(items)} to load...')
+    # print(f'>>> {len(items)} to load...')
     data = stac_load(items, bands=bands, crs="EPSG:4326", resolution=scale, bbox=bbox)
-    print(f'>>> {len(items)} loaded!')
+    # print(f'>>> {len(items)} loaded!')
 
     for i in range(1, num_images + 1):
         time = data.time[-i].values
@@ -59,9 +59,9 @@ def save_data(row, path, history=105, resolution=20, surrounding_box=0.1, num_im
         if not os.path.isfile(name):
             image = bands_to_image(data, i)
             image.save(name)
-            print(f'>>> {name} saved!')
-        else:
-            print(f'--- {name} already saved!')
+            # print(f'>>> {name} saved!')
+        # else:
+            # print(f'--- {name} already saved!')
 
         # Save the NumPy files
         for band in ['red', 'nir', 'SCL']:
@@ -70,9 +70,9 @@ def save_data(row, path, history=105, resolution=20, surrounding_box=0.1, num_im
             if not os.path.isfile(name):
                 array = data[band][-i].to_numpy()
                 np.save(name, array)
-                print(f'>>> {name} saved!')
-            else:
-                print(f'--- {name} already saved!')
+                # print(f'>>> {name} saved!')
+            # else:
+                # print(f'--- {name} already saved!')
 
 
 catalog = pystac_client.Client.open("https://planetarycomputer.microsoft.com/api/stac/v1", modifier=pc.sign_inplace)
@@ -82,7 +82,7 @@ train_df = pd.read_csv(train_path)
 test_df = pd.read_csv(test_path)
 
 os.makedirs('../data/raw', exist_ok=True)
-pandarallel.initialize()
+pandarallel.initialize(progress_bar=True)
 
 # Save train data
 train_path = '../data/raw/train'
