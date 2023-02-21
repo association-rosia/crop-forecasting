@@ -13,7 +13,7 @@ Jinja2
 stackstac
 pandarallel
 ipywidgets
-load-dotenv
+python-dotenv
 ipyleaflet
 seaborn
 statsmodels
