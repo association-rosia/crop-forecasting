@@ -6,12 +6,15 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from constants import FOLDER, S_COLUMNS, M_COLUMNS, G_COLUMNS, LABEL
+from tqdm import tqdm
+from math import sqrt
 
 
 class CustomDataset(Dataset):
-    def __init__(self, raw_df, join_df):
+    def __init__(self, raw_df, join_df, test=False):
         self.raw_df = raw_df
         self.join_df = join_df
+        self.test = test
 
     def __len__(self):
         return len(self.raw_df)
@@ -22,7 +25,11 @@ class CustomDataset(Dataset):
         latitude = row['Latitude']
         longitude = row['Longitude']
         date_of_harvest = row['Date of Harvest']
-        label = row[LABEL]
+        
+        if self.test:
+            label = row['Predicted Rice Yield (kg/ha)']
+        else:
+            label = row['Rice Yield (kg/ha)']
 
         inputs = self.join_df[(self.join_df['District'] == district) &
                               (self.join_df['Latitude'] == latitude) &
@@ -43,24 +50,29 @@ class CustomDataset(Dataset):
             's_inputs': s_inputs,
             'm_inputs': m_inputs,
             'g_inputs': g_inputs,
-            'label': label
+            'labels': label
         }  
         
         return item
     
 
-def get_loaders(batch_size, num_workers):
+def get_loaders(batch_size, num_workers, val_size=0.1):
     raw_train_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/raw_train.csv')
     join_train_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/join_train.csv')
-    train_dataset = CustomDataset(raw_train_df, join_train_df)
+    dataset = CustomDataset(raw_train_df, join_train_df)
+    
+    generator = torch.Generator().manual_seed(42)
+    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [1 - val_size, val_size], generator=generator)
+    
     train_loader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
     
     raw_test_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/raw_test.csv')
     join_test_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/join_test.csv')
-    test_dataset = CustomDataset(raw_test_df, join_test_df)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, num_workers=num_workers)
+    test_dataset = CustomDataset(raw_test_df, join_test_df, test=True)
+    test_loader = DataLoader(test_dataset, batch_size=1, num_workers=num_workers)
     
-    return train_loader, test_loader
+    return train_loader, val_loader, test_loader
 
 
 class get_lstm_output(nn.Module):
@@ -155,8 +167,92 @@ class CustomModel(nn.Module):
         return output
     
     
+def train_model(model, optimizer, criterion, train_loader):
+    train_loss = 0
+    
+    for data in tqdm(train_loader):
+        keys_inputs = ['s_inputs', 'm_inputs', 'g_inputs']
+        inputs = {key: data[key] for key in keys_inputs}
+        labels = data['labels'].float()
+
+        optimizer.zero_grad()
+        outputs = model(inputs)
+        
+        loss = criterion(outputs, labels)
+        train_loss += loss.item()
+        loss.backward()
+        
+        optimizer.step()
+        
+    train_loss /= len(train_loader.dataset)
+    
+    return train_loss
+
+
+def validate_model(model, val_loader):
+    val_loss = 0
+    
+    for data in tqdm(val_loader):
+        keys_inputs = ['s_inputs', 'm_inputs', 'g_inputs']
+        inputs = {key: data[key] for key in keys_inputs}
+        labels = data['labels'].float()
+
+        outputs = model(inputs)
+        
+        loss = criterion(outputs, labels)
+        val_loss += loss.item()
+        
+    val_loss /= len(val_loader.dataset)
+        
+    return val_loss
+
+
+def train(epochs, model, optimizer, criterion, train_loader, val_loader):
+    model.train()
+    for epoch in range(epochs):
+        print(f'\n=============== EPOCH {epoch+1}/{epochs} ===============')
+        train_loss = train_model(model, optimizer, criterion, train_loader)
+        val_loss = validate_model(model, val_loader)
+        print(f'Train (sqrt) = {sqrt(train_loss):.1f} - Val (sqrt) = {sqrt(val_loss):.1f}')
+
+        
+def round_yield():
+    return True
+
+
+def make_submission(model, test_loader):
+    print('\n\nCreate submission.csv')
+    test_path = '../data/raw/test.csv'
+    test_df = pd.read_csv(test_path)
+    
+    model.eval()
+    
+    with torch.no_grad():
+        for data in tqdm(test_loader):
+            keys_inputs = ['s_inputs', 'm_inputs', 'g_inputs']
+            inputs = {key: data[key] for key in keys_inputs}
+
+            district = data['district'][0]
+            latitude = data['latitude'].item()
+            longitude = data['longitude'].item()
+            date_of_harvest = data['date_of_harvest'][0]
+
+            output = model(inputs)
+
+            test_df.loc[(test_df['District'] == district) &
+                        (test_df['Latitude'] == latitude) &
+                        (test_df['Longitude'] == longitude) &
+                        (test_df['Date of Harvest'] == date_of_harvest),
+                        'Predicted Rice Yield (kg/ha)'] = output.item()
+
+    test_df.to_csv('submission.csv', index=False)
+    
+        
+    
 if __name__ == "__main__":
-    train_loader, test_loader = get_loaders(batch_size=4, num_workers=4)
+    epochs = 1
+    
+    train_loader, val_loader, test_loader = get_loaders(batch_size=4, num_workers=4)
     first_batch = next(iter(train_loader))
 
     hidden_size = 32 # try 32, 64, 128
@@ -168,4 +264,9 @@ if __name__ == "__main__":
     c_in_features = 1926
 
     model = CustomModel(sequence_length, num_layers, hidden_size, s_num_features, m_num_features, g_in_features, c_in_features)
-    print(model(first_batch))
+    
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
+        
+    train(epochs, model, optimizer, criterion, train_loader, val_loader)
+    make_submission(model, test_loader)
