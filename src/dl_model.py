@@ -12,6 +12,8 @@ from sklearn.metrics import r2_score
 import numpy as np 
 import wandb
 
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 
 def main():
     wandb.init(
@@ -20,16 +22,16 @@ def main():
             'batch_size': 8, # try 4, 8, 16, 32
             'hidden_size': 32, # try 32, 64, 128, 256
             'num_layers': 1, # try 1, 2, 3, 4
-            'learning_rate': 0.005,
-            'dropout': 0.1
-            'epochs': 500,
+            'learning_rate': 0.01,
+            'dropout': 0.1,
+            'epochs': 250,
             'optimizer': 'AdamW',
             'criterion': 'MSELoss', # try MSELoss, L1Loss, HuberLoss
+            'val_size': 0.2
         }
     )
-    
-    config = wandb.config
-    train_loader, val_loader, test_loader = get_loaders(batch_size=config['batch_size'], num_workers=4)
+
+    train_loader, val_loader, test_loader = get_loaders(wandb.config, num_workers=4)
     first_batch = next(iter(train_loader))
 
     wandb.config['sequence_length'] = first_batch['s_inputs'].shape[1]
@@ -37,15 +39,15 @@ def main():
     wandb.config['m_num_features'] = first_batch['m_inputs'].shape[2]
     wandb.config['g_in_features'] = first_batch['g_inputs'].shape[1]
     wandb.config['c_in_features'] = 1923
-    config = wandb.config
 
-    model = DLModel(config)
+    model = DLModel(wandb.config)
+    model.to(DEVICE)
     wandb.watch(model, log_freq=100)
     
-    criterion = get_criterion(config)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'])
+    criterion = get_criterion(wandb.config)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=wandb.config['learning_rate'])
     
-    train_model(config['epochs'], model, optimizer, criterion, train_loader, val_loader)
+    train_model(wandb.config, model, optimizer, criterion, train_loader, val_loader)
     make_submission(model, test_loader)
 
 
@@ -95,7 +97,10 @@ class DLDataset(Dataset):
         return item
     
 
-def get_loaders(batch_size, num_workers, val_size=0.2):
+def get_loaders(config, num_workers):
+    batch_size = config['batch_size']
+    val_size = config['val_size']
+    
     raw_train_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/raw_train.csv')
     join_train_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/join_train.csv')
     dataset = DLDataset(raw_train_df, join_train_df)
@@ -140,7 +145,7 @@ def lstm(sequence_length, num_features, hidden_size, num_layers, dropout):
     return model
 
 
-def conv1d(in_channels, out_channels, kernel_size=3, dropout):
+def conv1d(in_channels, out_channels, dropout, kernel_size=3):
     model = nn.Sequential(
         nn.Conv1d(in_channels, out_channels, kernel_size),
         nn.BatchNorm1d(out_channels),
@@ -174,7 +179,7 @@ def last_fc(in_features, dropout):
         nn.ReLU(),
         nn.Linear(int(in_features/4), int(in_features/8)),
         nn.ReLU(),
-        nn.Linear(int(in_features/4), 1)
+        nn.Linear(int(in_features/8), 1)
     )
     return model
 
@@ -182,7 +187,6 @@ def last_fc(in_features, dropout):
 class DLModel(nn.Module):
     def __init__(self, config):
         super().__init__()
-        
         sequence_length = config['sequence_length']
         hidden_size = config['hidden_size']
         num_layers = config['num_layers']
@@ -234,8 +238,8 @@ def train_epoch(model, optimizer, criterion, train_loader):
     
     for data in train_loader:
         keys_inputs = ['s_inputs', 'm_inputs', 'g_inputs']
-        inputs = {key: data[key] for key in keys_inputs}
-        labels = data['labels'].float()
+        inputs = {key: data[key].to(DEVICE) for key in keys_inputs}
+        labels = data['labels'].float().to(DEVICE)
 
         optimizer.zero_grad()
         outputs = model(inputs)
@@ -258,8 +262,8 @@ def val_epoch(model, criterion, val_loader):
     
     for data in val_loader:
         keys_inputs = ['s_inputs', 'm_inputs', 'g_inputs']
-        inputs = {key: data[key] for key in keys_inputs}
-        labels = data['labels'].float()
+        inputs = {key: data[key].to(DEVICE) for key in keys_inputs}
+        labels = data['labels'].float().to(DEVICE)
 
         outputs = model(inputs)
         
@@ -279,7 +283,8 @@ def early_stopping():
     return True
 
 
-def train_model(epochs, model, optimizer, criterion, train_loader, val_loader):
+def train_model(config, model, optimizer, criterion, train_loader, val_loader):
+    epochs = config['epochs']
     train_losses = []
     val_losses = []
     
@@ -295,7 +300,7 @@ def train_model(epochs, model, optimizer, criterion, train_loader, val_loader):
         if epoch > 0:
             wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'val_r2_score': val_r2_score})
         
-        print(f'Train = {sqrt(train_loss):.1f} - Val (sqrt) = {sqrt(val_loss):.1f} - Val R2 = {val_r2_score:.3f}')
+        print(f'Train (sqrt) = {sqrt(train_loss):.1f} - Val (sqrt) = {sqrt(val_loss):.1f} - Val R2 = {val_r2_score:.3f}')
 
         
 def round_prediction():
@@ -311,7 +316,7 @@ def make_submission(model, test_loader):
     with torch.no_grad():
         for data in test_loader:
             keys_inputs = ['s_inputs', 'm_inputs', 'g_inputs']
-            inputs = {key: data[key] for key in keys_inputs}
+            inputs = {key: data[key].to(DEVICE) for key in keys_inputs}
 
             district = data['district'][0]
             latitude = data['latitude'].item()
