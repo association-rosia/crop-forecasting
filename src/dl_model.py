@@ -1,5 +1,5 @@
 import warnings
-warnings.filterwarnings("ignore")
+warnings.filterwarnings('ignore')
 
 import pandas as pd
 import torch
@@ -10,6 +10,43 @@ from math import sqrt
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
 import numpy as np 
+import wandb
+
+
+def main():
+    wandb.init(
+        project='winged-bull',
+        config = {
+            'batch_size': 8, # try 4, 8, 16, 32
+            'hidden_size': 32, # try 32, 64, 128, 256
+            'num_layers': 1, # try 1, 2, 3, 4
+            'learning_rate': 0.005,
+            'dropout': 0.1
+            'epochs': 500,
+            'optimizer': 'AdamW',
+            'criterion': 'MSELoss', # try MSELoss, L1Loss, HuberLoss
+        }
+    )
+    
+    config = wandb.config
+    train_loader, val_loader, test_loader = get_loaders(batch_size=config['batch_size'], num_workers=4)
+    first_batch = next(iter(train_loader))
+
+    wandb.config['sequence_length'] = first_batch['s_inputs'].shape[1]
+    wandb.config['s_num_features'] = first_batch['s_inputs'].shape[2]
+    wandb.config['m_num_features'] = first_batch['m_inputs'].shape[2]
+    wandb.config['g_in_features'] = first_batch['g_inputs'].shape[1]
+    wandb.config['c_in_features'] = 1923
+    config = wandb.config
+
+    model = DLModel(config)
+    wandb.watch(model, log_freq=100)
+    
+    criterion = get_criterion(config)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'])
+    
+    train_model(config['epochs'], model, optimizer, criterion, train_loader, val_loader)
+    make_submission(model, test_loader)
 
 
 class DLDataset(Dataset):
@@ -77,12 +114,23 @@ def get_loaders(batch_size, num_workers, val_size=0.2):
     return train_loader, val_loader, test_loader
 
 
+def get_criterion(config):
+    if config['criterion'] == 'MSELoss':
+        criterion = nn.MSELoss()
+    elif config['criterion'] == 'L1Loss':
+        criterion = nn.L1Loss()
+    elif config['criterion'] == 'HuberLoss':
+        criterion = nn.HuberLoss()
+        
+    return criterion
+
+
 class get_lstm_output(nn.Module):
     def forward(self, x):
         return x[0]
     
 
-def lstm(sequence_length, num_features, hidden_size, num_layers, dropout=0.1):
+def lstm(sequence_length, num_features, hidden_size, num_layers, dropout):
     model = nn.Sequential(
         nn.LSTM(num_features, hidden_size, num_layers),
         get_lstm_output(),
@@ -92,23 +140,23 @@ def lstm(sequence_length, num_features, hidden_size, num_layers, dropout=0.1):
     return model
 
 
-def conv1d(in_channels, out_channels, kernel_size=3, dropout=0.1):
+def conv1d(in_channels, out_channels, kernel_size=3, dropout):
     model = nn.Sequential(
         nn.Conv1d(in_channels, out_channels, kernel_size),
         nn.BatchNorm1d(out_channels),
         nn.ReLU(),
-        nn.Dropout(dropout))
+        nn.Dropout(dropout)
+    )
     return model
 
 
-def fc(in_features, dropout=0.1):
+def fc(in_features, dropout):
     model = nn.Sequential(
-        nn.Linear(in_features, in_features),
-        nn.ReLU(),
         nn.Linear(in_features, in_features),
         nn.BatchNorm1d(in_features),
         nn.ReLU(),
-        nn.Dropout(dropout))
+        nn.Dropout(dropout)
+    )
     return model
 
 
@@ -120,31 +168,39 @@ def concat_inputs(s_output, m_output, g_output):
     return f_output
 
 
-def last_fc(in_features):
+def last_fc(in_features, dropout):
     model = nn.Sequential(
-        nn.Linear(in_features, in_features),
-        nn.ReLU(),
-        nn.Linear(in_features, int(in_features/2)),
-        nn.ReLU(),
-        nn.Linear(int(in_features/2), int(in_features/4)),
+        nn.Linear(in_features, int(in_features/4)),
         nn.ReLU(),
         nn.Linear(int(in_features/4), int(in_features/8)),
         nn.ReLU(),
-        nn.Linear(int(in_features/8), 1))
+        nn.Linear(int(in_features/4), 1)
+    )
     return model
 
 
 class DLModel(nn.Module):
-    def __init__(self, sequence_length, num_layers, hidden_size, s_num_features, m_num_features, g_in_features, c_in_features):
+    def __init__(self, config):
         super().__init__()
-        self.s_lstm = lstm(sequence_length, s_num_features, hidden_size, num_layers)
-        self.s_conv1d = conv1d(sequence_length, hidden_size)
+        
+        sequence_length = config['sequence_length']
+        hidden_size = config['hidden_size']
+        num_layers = config['num_layers']
+        dropout = config['dropout']
+        
+        s_num_features = config['s_num_features']
+        m_num_features = config['m_num_features']
+        g_in_features = config['g_in_features']
+        c_in_features = config['c_in_features']
+        
+        self.s_lstm = lstm(sequence_length, s_num_features, hidden_size, num_layers, dropout)
+        self.s_conv1d = conv1d(sequence_length, hidden_size, dropout)
 
-        self.m_lstm = lstm(sequence_length, m_num_features, hidden_size, num_layers)
-        self.m_conv1d = conv1d(sequence_length, hidden_size)
+        self.m_lstm = lstm(sequence_length, m_num_features, hidden_size, num_layers, dropout)
+        self.m_conv1d = conv1d(sequence_length, hidden_size, dropout)
 
-        self.g_fc = fc(g_in_features)
-        self.c_fc = last_fc(c_in_features)
+        self.g_fc = fc(g_in_features, dropout)
+        self.c_fc = last_fc(c_in_features, dropout)
 
     def forward(self, x):
         s_inputs = x['s_inputs']
@@ -190,12 +246,12 @@ def train_epoch(model, optimizer, criterion, train_loader):
         
         optimizer.step()
         
-    train_loss /= len(train_loader.dataset)
+    train_loss /= len(train_loader)
     
     return train_loss
 
 
-def val_epoch(model, val_loader):
+def val_epoch(model, criterion, val_loader):
     val_loss = 0
     val_labels = []
     val_preds = []
@@ -213,24 +269,14 @@ def val_epoch(model, val_loader):
         val_labels += labels.tolist()
         val_preds += outputs.tolist()
         
-    val_loss /= len(val_loader.dataset)
-    val_score = r2_score(val_labels, val_preds)
+    val_loss /= len(val_loader)
+    val_r2_score = r2_score(val_labels, val_preds)
         
-    return val_loss, val_score
+    return val_loss, val_r2_score
 
 
 def early_stopping():
     return True
-
-
-def plot_losses(train_losses, val_losses):
-    x = list(range(len(train_losses)))
-    plt.plot(x, np.log10(train_losses), label='train')
-    plt.plot(x, np.log10(val_losses), label='val')
-    plt.legend()
-    plt.show()
-    plt.savefig('losses.png')
-    plt.clf()
 
 
 def train_model(epochs, model, optimizer, criterion, train_loader, val_loader):
@@ -243,12 +289,13 @@ def train_model(epochs, model, optimizer, criterion, train_loader, val_loader):
         train_loss = train_epoch(model, optimizer, criterion, train_loader)
         train_losses.append(train_loss)
         
-        val_loss, val_score = val_epoch(model, val_loader)
+        val_loss, val_r2_score = val_epoch(model, criterion, val_loader)
         val_losses.append(val_loss)
         
-        print(f'Train (sqrt) = {sqrt(train_loss):.1f} - Val (sqrt) = {sqrt(val_loss):.1f} - Val R2 = {val_score:.2f}')
+        if epoch > 0:
+            wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'val_r2_score': val_r2_score})
         
-        plot_losses(train_losses, val_losses)
+        print(f'Train = {sqrt(train_loss):.1f} - Val (sqrt) = {sqrt(val_loss):.1f} - Val R2 = {val_r2_score:.3f}')
 
         
 def round_prediction():
@@ -280,27 +327,7 @@ def make_submission(model, test_loader):
                         'Predicted Rice Yield (kg/ha)'] = output.item()
 
     test_df.to_csv('submission.csv', index=False)
-    
         
     
-if __name__ == "__main__":
-    epochs = 1000
-    
-    train_loader, val_loader, test_loader = get_loaders(batch_size=4, num_workers=4)
-    first_batch = next(iter(train_loader))
-
-    hidden_size = 32 # try 32, 64, 128
-    num_layers = 1 # try 1, 2, 3, 4
-    sequence_length = first_batch['s_inputs'].shape[1]
-    s_num_features = first_batch['s_inputs'].shape[2]
-    m_num_features = first_batch['m_inputs'].shape[2]
-    g_in_features = first_batch['g_inputs'].shape[1]
-    c_in_features = 1923
-
-    model = DLModel(sequence_length, num_layers, hidden_size, s_num_features, m_num_features, g_in_features, c_in_features)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
-    criterion = nn.MSELoss()
-    
-        
-    train_model(epochs, model, optimizer, criterion, train_loader, val_loader)
-    make_submission(model, test_loader)
+if __name__ == '__main__':
+    main()
