@@ -1,17 +1,61 @@
 import warnings
-warnings.filterwarnings("ignore")
+warnings.filterwarnings('ignore')
 
 import pandas as pd
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
-from constants import FOLDER, S_COLUMNS, M_COLUMNS, G_COLUMNS, LABEL
+from constants import FOLDER, S_COLUMNS, M_COLUMNS, G_COLUMNS
+from math import sqrt
+import matplotlib.pyplot as plt
+from sklearn.metrics import r2_score
+import numpy as np 
+import wandb
+
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-class CustomDataset(Dataset):
-    def __init__(self, raw_df, join_df):
+def main():
+    wandb.init(
+        project='winged-bull',
+        config = {
+            'batch_size': 8, # try 4, 8, 16, 32
+            'hidden_size': 32, # try 32, 64, 128, 256
+            'num_layers': 1, # try 1, 2, 3, 4
+            'learning_rate': 0.01,
+            'dropout': 0.1,
+            'epochs': 250,
+            'optimizer': 'AdamW',
+            'criterion': 'MSELoss', # try MSELoss, L1Loss, HuberLoss
+            'val_size': 0.2
+        }
+    )
+
+    train_loader, val_loader, test_loader = get_loaders(wandb.config, num_workers=4)
+    first_batch = next(iter(train_loader))
+
+    wandb.config['sequence_length'] = first_batch['s_inputs'].shape[1]
+    wandb.config['s_num_features'] = first_batch['s_inputs'].shape[2]
+    wandb.config['m_num_features'] = first_batch['m_inputs'].shape[2]
+    wandb.config['g_in_features'] = first_batch['g_inputs'].shape[1]
+    wandb.config['c_in_features'] = 1923
+
+    model = DLModel(wandb.config)
+    model.to(DEVICE)
+    wandb.watch(model, log_freq=100)
+    
+    criterion = get_criterion(wandb.config)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=wandb.config['learning_rate'])
+    
+    train_model(wandb.config, model, optimizer, criterion, train_loader, val_loader)
+    make_submission(model, test_loader)
+
+
+class DLDataset(Dataset):
+    def __init__(self, raw_df, join_df, test=False):
         self.raw_df = raw_df
         self.join_df = join_df
+        self.test = test
 
     def __len__(self):
         return len(self.raw_df)
@@ -22,7 +66,11 @@ class CustomDataset(Dataset):
         latitude = row['Latitude']
         longitude = row['Longitude']
         date_of_harvest = row['Date of Harvest']
-        label = row[LABEL]
+        
+        if self.test:
+            label = row['Predicted Rice Yield (kg/ha)']
+        else:
+            label = row['Rice Yield (kg/ha)']
 
         inputs = self.join_df[(self.join_df['District'] == district) &
                               (self.join_df['Latitude'] == latitude) &
@@ -43,24 +91,43 @@ class CustomDataset(Dataset):
             's_inputs': s_inputs,
             'm_inputs': m_inputs,
             'g_inputs': g_inputs,
-            'label': label
+            'labels': label
         }  
         
         return item
     
 
-def get_loaders(batch_size, num_workers):
+def get_loaders(config, num_workers):
+    batch_size = config['batch_size']
+    val_size = config['val_size']
+    
     raw_train_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/raw_train.csv')
     join_train_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/join_train.csv')
-    train_dataset = CustomDataset(raw_train_df, join_train_df)
+    dataset = DLDataset(raw_train_df, join_train_df)
+    
+    generator = torch.Generator().manual_seed(42)
+    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [1 - val_size, val_size], generator=generator)
+    
     train_loader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
     
     raw_test_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/raw_test.csv')
     join_test_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/join_test.csv')
-    test_dataset = CustomDataset(raw_test_df, join_test_df)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, num_workers=num_workers)
+    test_dataset = DLDataset(raw_test_df, join_test_df, test=True)
+    test_loader = DataLoader(test_dataset, batch_size=1, num_workers=num_workers)
     
-    return train_loader, test_loader
+    return train_loader, val_loader, test_loader
+
+
+def get_criterion(config):
+    if config['criterion'] == 'MSELoss':
+        criterion = nn.MSELoss()
+    elif config['criterion'] == 'L1Loss':
+        criterion = nn.L1Loss()
+    elif config['criterion'] == 'HuberLoss':
+        criterion = nn.HuberLoss()
+        
+    return criterion
 
 
 class get_lstm_output(nn.Module):
@@ -68,7 +135,7 @@ class get_lstm_output(nn.Module):
         return x[0]
     
 
-def lstm(sequence_length, num_features, hidden_size, num_layers, dropout=0.1):
+def lstm(sequence_length, num_features, hidden_size, num_layers, dropout):
     model = nn.Sequential(
         nn.LSTM(num_features, hidden_size, num_layers),
         get_lstm_output(),
@@ -78,23 +145,23 @@ def lstm(sequence_length, num_features, hidden_size, num_layers, dropout=0.1):
     return model
 
 
-def conv1d(in_channels, out_channels, kernel_size=3, dropout=0.1):
+def conv1d(in_channels, out_channels, dropout, kernel_size=3):
     model = nn.Sequential(
         nn.Conv1d(in_channels, out_channels, kernel_size),
         nn.BatchNorm1d(out_channels),
         nn.ReLU(),
-        nn.Dropout(dropout))
+        nn.Dropout(dropout)
+    )
     return model
 
 
-def fc(in_features, dropout=0.1):
+def fc(in_features, dropout):
     model = nn.Sequential(
-        nn.Linear(in_features, 4*in_features),
+        nn.Linear(in_features, in_features),
+        nn.BatchNorm1d(in_features),
         nn.ReLU(),
-        nn.Linear(4*in_features, 2*in_features),
-        nn.BatchNorm1d(2*in_features),
-        nn.ReLU(),
-        nn.Dropout(dropout))
+        nn.Dropout(dropout)
+    )
     return model
 
 
@@ -106,27 +173,38 @@ def concat_inputs(s_output, m_output, g_output):
     return f_output
 
 
-def last_fc(in_features):
+def last_fc(in_features, dropout):
     model = nn.Sequential(
-        nn.Linear(in_features, int(in_features/2)),
+        nn.Linear(in_features, int(in_features/4)),
         nn.ReLU(),
-        nn.Linear(int(in_features/2), int(in_features/4)),
+        nn.Linear(int(in_features/4), int(in_features/8)),
         nn.ReLU(),
-        nn.Linear(int(in_features/4), 1))
+        nn.Linear(int(in_features/8), 1)
+    )
     return model
 
 
-class CustomModel(nn.Module):
-    def __init__(self, sequence_length, num_layers, hidden_size, s_num_features, m_num_features, g_in_features, c_in_features):
+class DLModel(nn.Module):
+    def __init__(self, config):
         super().__init__()
-        self.s_lstm = lstm(sequence_length, s_num_features, hidden_size, num_layers)
-        self.s_conv1d = conv1d(sequence_length, hidden_size)
+        sequence_length = config['sequence_length']
+        hidden_size = config['hidden_size']
+        num_layers = config['num_layers']
+        dropout = config['dropout']
+        
+        s_num_features = config['s_num_features']
+        m_num_features = config['m_num_features']
+        g_in_features = config['g_in_features']
+        c_in_features = config['c_in_features']
+        
+        self.s_lstm = lstm(sequence_length, s_num_features, hidden_size, num_layers, dropout)
+        self.s_conv1d = conv1d(sequence_length, hidden_size, dropout)
 
-        self.m_lstm = lstm(sequence_length, m_num_features, hidden_size, num_layers)
-        self.m_conv1d = conv1d(sequence_length, hidden_size)
+        self.m_lstm = lstm(sequence_length, m_num_features, hidden_size, num_layers, dropout)
+        self.m_conv1d = conv1d(sequence_length, hidden_size, dropout)
 
-        self.g_fc = fc(g_in_features)
-        self.c_fc = last_fc(c_in_features)
+        self.g_fc = fc(g_in_features, dropout)
+        self.c_fc = last_fc(c_in_features, dropout)
 
     def forward(self, x):
         s_inputs = x['s_inputs']
@@ -147,7 +225,7 @@ class CustomModel(nn.Module):
         # Concatanate inputs
         c_output = concat_inputs(s_output, m_output, g_output)
         
-        # print(c_output.shape) to get c_in_features
+        # print(c_output.shape) # RuntimeError: mat1 and mat2 shapes cannot be multiplied
         
         # Concat inputs (Fully connected layers)
         output = self.c_fc(c_output)
@@ -155,17 +233,106 @@ class CustomModel(nn.Module):
         return output
     
     
-if __name__ == "__main__":
-    train_loader, test_loader = get_loaders(batch_size=4, num_workers=4)
-    first_batch = next(iter(train_loader))
+def train_epoch(model, optimizer, criterion, train_loader):
+    train_loss = 0
+    
+    for data in train_loader:
+        keys_inputs = ['s_inputs', 'm_inputs', 'g_inputs']
+        inputs = {key: data[key].to(DEVICE) for key in keys_inputs}
+        labels = data['labels'].float().to(DEVICE)
 
-    hidden_size = 32 # try 32, 64, 128
-    num_layers = 2 # try 1, 2, 3, 4
-    sequence_length = first_batch['s_inputs'].shape[1]
-    s_num_features = first_batch['s_inputs'].shape[2]
-    m_num_features = first_batch['m_inputs'].shape[2]
-    g_in_features = first_batch['g_inputs'].shape[1]
-    c_in_features = 1926
+        optimizer.zero_grad()
+        outputs = model(inputs)
+        
+        loss = criterion(outputs, labels)
+        train_loss += loss.item()
+        loss.backward()
+        
+        optimizer.step()
+        
+    train_loss /= len(train_loader)
+    
+    return train_loss
 
-    model = CustomModel(sequence_length, num_layers, hidden_size, s_num_features, m_num_features, g_in_features, c_in_features)
-    print(model(first_batch))
+
+def val_epoch(model, criterion, val_loader):
+    val_loss = 0
+    val_labels = []
+    val_preds = []
+    
+    for data in val_loader:
+        keys_inputs = ['s_inputs', 'm_inputs', 'g_inputs']
+        inputs = {key: data[key].to(DEVICE) for key in keys_inputs}
+        labels = data['labels'].float().to(DEVICE)
+
+        outputs = model(inputs)
+        
+        loss = criterion(outputs, labels)
+        val_loss += loss.item()
+        
+        val_labels += labels.tolist()
+        val_preds += outputs.tolist()
+        
+    val_loss /= len(val_loader)
+    val_r2_score = r2_score(val_labels, val_preds)
+        
+    return val_loss, val_r2_score
+
+
+def early_stopping():
+    return True
+
+
+def train_model(config, model, optimizer, criterion, train_loader, val_loader):
+    epochs = config['epochs']
+    train_losses = []
+    val_losses = []
+    
+    model.train()
+    for epoch in range(epochs):
+        print(f'\n--- EPOCH {epoch+1}/{epochs} ---')
+        train_loss = train_epoch(model, optimizer, criterion, train_loader)
+        train_losses.append(train_loss)
+        
+        val_loss, val_r2_score = val_epoch(model, criterion, val_loader)
+        val_losses.append(val_loss)
+        
+        if epoch > 0:
+            wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'val_r2_score': val_r2_score})
+        
+        print(f'Train (sqrt) = {sqrt(train_loss):.1f} - Val (sqrt) = {sqrt(val_loss):.1f} - Val R2 = {val_r2_score:.3f}')
+
+        
+def round_prediction():
+    return True
+
+
+def make_submission(model, test_loader):
+    print('\nCreate submission.csv')
+    test_path = '../data/raw/test.csv'
+    test_df = pd.read_csv(test_path)
+    
+    model.eval()
+    with torch.no_grad():
+        for data in test_loader:
+            keys_inputs = ['s_inputs', 'm_inputs', 'g_inputs']
+            inputs = {key: data[key].to(DEVICE) for key in keys_inputs}
+
+            district = data['district'][0]
+            latitude = data['latitude'].item()
+            longitude = data['longitude'].item()
+            date_of_harvest = data['date_of_harvest'][0]
+
+            output = model(inputs)
+
+            test_df.loc[(test_df['District'] == district) &
+                        (test_df['Latitude'] == latitude) &
+                        (test_df['Longitude'] == longitude) &
+                        (test_df['Date of Harvest'] == date_of_harvest),
+                        'Predicted Rice Yield (kg/ha)'] = output.item()
+
+    test_df.to_csv('submission.csv', index=False)
+        
+    
+if __name__ == '__main__':
+    main()
