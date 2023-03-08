@@ -5,12 +5,14 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
-from constants import FOLDER, S_COLUMNS, M_COLUMNS, G_COLUMNS, LABEL
-from tqdm import tqdm
+from constants import FOLDER, S_COLUMNS, M_COLUMNS, G_COLUMNS
 from math import sqrt
+import matplotlib.pyplot as plt
+from sklearn.metrics import r2_score
+import numpy as np 
 
 
-class CustomDataset(Dataset):
+class DLDataset(Dataset):
     def __init__(self, raw_df, join_df, test=False):
         self.raw_df = raw_df
         self.join_df = join_df
@@ -56,10 +58,10 @@ class CustomDataset(Dataset):
         return item
     
 
-def get_loaders(batch_size, num_workers, val_size=0.1):
+def get_loaders(batch_size, num_workers, val_size=0.2):
     raw_train_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/raw_train.csv')
     join_train_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/join_train.csv')
-    dataset = CustomDataset(raw_train_df, join_train_df)
+    dataset = DLDataset(raw_train_df, join_train_df)
     
     generator = torch.Generator().manual_seed(42)
     train_dataset, val_dataset = torch.utils.data.random_split(dataset, [1 - val_size, val_size], generator=generator)
@@ -69,7 +71,7 @@ def get_loaders(batch_size, num_workers, val_size=0.1):
     
     raw_test_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/raw_test.csv')
     join_test_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/join_test.csv')
-    test_dataset = CustomDataset(raw_test_df, join_test_df, test=True)
+    test_dataset = DLDataset(raw_test_df, join_test_df, test=True)
     test_loader = DataLoader(test_dataset, batch_size=1, num_workers=num_workers)
     
     return train_loader, val_loader, test_loader
@@ -101,10 +103,10 @@ def conv1d(in_channels, out_channels, kernel_size=3, dropout=0.1):
 
 def fc(in_features, dropout=0.1):
     model = nn.Sequential(
-        nn.Linear(in_features, 4*in_features),
+        nn.Linear(in_features, in_features),
         nn.ReLU(),
-        nn.Linear(4*in_features, 2*in_features),
-        nn.BatchNorm1d(2*in_features),
+        nn.Linear(in_features, in_features),
+        nn.BatchNorm1d(in_features),
         nn.ReLU(),
         nn.Dropout(dropout))
     return model
@@ -120,15 +122,19 @@ def concat_inputs(s_output, m_output, g_output):
 
 def last_fc(in_features):
     model = nn.Sequential(
+        nn.Linear(in_features, in_features),
+        nn.ReLU(),
         nn.Linear(in_features, int(in_features/2)),
         nn.ReLU(),
         nn.Linear(int(in_features/2), int(in_features/4)),
         nn.ReLU(),
-        nn.Linear(int(in_features/4), 1))
+        nn.Linear(int(in_features/4), int(in_features/8)),
+        nn.ReLU(),
+        nn.Linear(int(in_features/8), 1))
     return model
 
 
-class CustomModel(nn.Module):
+class DLModel(nn.Module):
     def __init__(self, sequence_length, num_layers, hidden_size, s_num_features, m_num_features, g_in_features, c_in_features):
         super().__init__()
         self.s_lstm = lstm(sequence_length, s_num_features, hidden_size, num_layers)
@@ -159,7 +165,7 @@ class CustomModel(nn.Module):
         # Concatanate inputs
         c_output = concat_inputs(s_output, m_output, g_output)
         
-        # print(c_output.shape) to get c_in_features
+        # print(c_output.shape) # RuntimeError: mat1 and mat2 shapes cannot be multiplied
         
         # Concat inputs (Fully connected layers)
         output = self.c_fc(c_output)
@@ -167,10 +173,10 @@ class CustomModel(nn.Module):
         return output
     
     
-def train_model(model, optimizer, criterion, train_loader):
+def train_epoch(model, optimizer, criterion, train_loader):
     train_loss = 0
     
-    for data in tqdm(train_loader):
+    for data in train_loader:
         keys_inputs = ['s_inputs', 'm_inputs', 'g_inputs']
         inputs = {key: data[key] for key in keys_inputs}
         labels = data['labels'].float()
@@ -189,10 +195,12 @@ def train_model(model, optimizer, criterion, train_loader):
     return train_loss
 
 
-def validate_model(model, val_loader):
+def val_epoch(model, val_loader):
     val_loss = 0
+    val_labels = []
+    val_preds = []
     
-    for data in tqdm(val_loader):
+    for data in val_loader:
         keys_inputs = ['s_inputs', 'm_inputs', 'g_inputs']
         inputs = {key: data[key] for key in keys_inputs}
         labels = data['labels'].float()
@@ -202,33 +210,59 @@ def validate_model(model, val_loader):
         loss = criterion(outputs, labels)
         val_loss += loss.item()
         
-    val_loss /= len(val_loader.dataset)
+        val_labels += labels.tolist()
+        val_preds += outputs.tolist()
         
-    return val_loss
+    val_loss /= len(val_loader.dataset)
+    val_score = r2_score(val_labels, val_preds)
+        
+    return val_loss, val_score
 
 
-def train(epochs, model, optimizer, criterion, train_loader, val_loader):
+def early_stopping():
+    return True
+
+
+def plot_losses(train_losses, val_losses):
+    x = list(range(len(train_losses)))
+    plt.plot(x, np.log10(train_losses), label='train')
+    plt.plot(x, np.log10(val_losses), label='val')
+    plt.legend()
+    plt.show()
+    plt.savefig('losses.png')
+    plt.clf()
+
+
+def train_model(epochs, model, optimizer, criterion, train_loader, val_loader):
+    train_losses = []
+    val_losses = []
+    
     model.train()
     for epoch in range(epochs):
-        print(f'\n=============== EPOCH {epoch+1}/{epochs} ===============')
-        train_loss = train_model(model, optimizer, criterion, train_loader)
-        val_loss = validate_model(model, val_loader)
-        print(f'Train (sqrt) = {sqrt(train_loss):.1f} - Val (sqrt) = {sqrt(val_loss):.1f}')
+        print(f'\n--- EPOCH {epoch+1}/{epochs} ---')
+        train_loss = train_epoch(model, optimizer, criterion, train_loader)
+        train_losses.append(train_loss)
+        
+        val_loss, val_score = val_epoch(model, val_loader)
+        val_losses.append(val_loss)
+        
+        print(f'Train (sqrt) = {sqrt(train_loss):.1f} - Val (sqrt) = {sqrt(val_loss):.1f} - Val R2 = {val_score:.2f}')
+        
+        plot_losses(train_losses, val_losses)
 
         
-def round_yield():
+def round_prediction():
     return True
 
 
 def make_submission(model, test_loader):
-    print('\n\nCreate submission.csv')
+    print('\nCreate submission.csv')
     test_path = '../data/raw/test.csv'
     test_df = pd.read_csv(test_path)
     
     model.eval()
-    
     with torch.no_grad():
-        for data in tqdm(test_loader):
+        for data in test_loader:
             keys_inputs = ['s_inputs', 'm_inputs', 'g_inputs']
             inputs = {key: data[key] for key in keys_inputs}
 
@@ -250,23 +284,23 @@ def make_submission(model, test_loader):
         
     
 if __name__ == "__main__":
-    epochs = 1
+    epochs = 1000
     
     train_loader, val_loader, test_loader = get_loaders(batch_size=4, num_workers=4)
     first_batch = next(iter(train_loader))
 
     hidden_size = 32 # try 32, 64, 128
-    num_layers = 2 # try 1, 2, 3, 4
+    num_layers = 1 # try 1, 2, 3, 4
     sequence_length = first_batch['s_inputs'].shape[1]
     s_num_features = first_batch['s_inputs'].shape[2]
     m_num_features = first_batch['m_inputs'].shape[2]
     g_in_features = first_batch['g_inputs'].shape[1]
-    c_in_features = 1926
+    c_in_features = 1923
 
-    model = CustomModel(sequence_length, num_layers, hidden_size, s_num_features, m_num_features, g_in_features, c_in_features)
-    
-    criterion = nn.MSELoss()
+    model = DLModel(sequence_length, num_layers, hidden_size, s_num_features, m_num_features, g_in_features, c_in_features)
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
+    criterion = nn.MSELoss()
+    
         
-    train(epochs, model, optimizer, criterion, train_loader, val_loader)
+    train_model(epochs, model, optimizer, criterion, train_loader, val_loader)
     make_submission(model, test_loader)
