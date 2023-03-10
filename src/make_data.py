@@ -7,6 +7,7 @@ import xarray as xr
 import os
 import multiprocessing as mp
 import math
+import numpy as np
 from tqdm.contrib.concurrent import process_map  # or thread_map
 from tqdm import tqdm
 
@@ -155,8 +156,8 @@ def make_data(path, save_folder):
     # data_filter = pd.concat(list_data_filter, axis='index')
 
     print(f'\nSave SAR data from {path.split("/")[-1]}...')
-    data.to_netcdf(f'{save_folder}/{path.split("/")[-1].split(".")[0]}.nc')
-    data_filter.to_csv(f'{save_folder}/{path.split("/")[-1].split(".")[0]}_filter.nc')
+    data.to_netcdf(f'{save_folder}/{path.split("/")[-1].split(".")[0]}.nc', engine='scipy')
+    data_filter.to_netcdf(f'{save_folder}/{path.split("/")[-1].split(".")[0]}_filter.nc', engine='scipy')
     print(f'\nSAR data from {path.split("/")[-1]} saved!')
 
 if __name__ == '__main__':
