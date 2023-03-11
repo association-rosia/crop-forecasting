@@ -1,19 +1,18 @@
+import os
+import math
+from tqdm import tqdm
+from datetime import datetime, timedelta
+
+import numpy as np
+import pandas as pd
+import xarray as xr
+
 import pystac_client
 import planetary_computer as pc
-import pandas as pd
-from datetime import datetime, timedelta
 from odc.stac import stac_load
-import xarray as xr
-import os
-import multiprocessing as mp
-import math
-import numpy as np
-from tqdm.contrib.concurrent import process_map  # or thread_map
-from tqdm import tqdm
 
-# from dotenv import load_dotenv
-# load_dotenv()
-# pc.settings.set_subscription_key(os.getenv('PC_SDK_SUBSCRIPTION_KEY'))
+import multiprocessing as mp
+
 
 # Make data constants
 SIZE = 'adaptative' # 'fixed'
@@ -80,17 +79,6 @@ def get_data(bbox, time_period: str, bands: list[str], scale: float):
 
 
 def process_data(xds: xr.Dataset, row: pd.Series, history_dates:int)->xr.Dataset:
-    # data = data.mean(dim=['latitude', 'longitude'], skipna=True)
-    # data = data.to_dataframe()
-    # data = data.sort_index(ascending=False).iloc[:history_dates]
-    # data.index = data.index.round('D')
-    # data.rename(columns=dict_band_name, inplace=True)
-    # data.drop(columns=['SCL', 'spatial_ref'], inplace=True)
-    # df = pd.DataFrame([row]*history_dates, index=data.index)
-    # data = pd.concat([df, data], axis='columns')
-    # data.reset_index(inplace=True)
-
-    # xdf = data.copy(deep=True) 
     xds = xds.drop(['spatial_ref', 'SCL'])
     xds = xds.mean(dim=['latitude', 'longitude'], skipna=True)
     xds = xds.sortby('time', ascending=False)
@@ -99,8 +87,8 @@ def process_data(xds: xr.Dataset, row: pd.Series, history_dates:int)->xr.Dataset
     xds['state_dev'] =  ('time', np.arange(history_dates)[::-1])
     xds = xds.swap_dims({'time': 'state_dev'})
     xds = xds.rename_vars(dict_band_name)
-    df = pd.DataFrame([row]*history_dates, index=xds.indexes['state_dev'])
-    xds = xds.merge(df.to_xarray())
+    xds = xds.expand_dims({'ts_id': 1})
+    xds['ts_id'] = [row.name]
 
     return xds
 
@@ -142,18 +130,22 @@ def save_data_app(index_row, history_days=130, history_dates=24, resolution=10):
 def make_data(path, save_folder):
     list_data = []
     list_data_filter = []
+    df = None
 
     with mp.Pool(8) as p:
         df = pd.read_csv(path)
+        df.index.name = 'ts_id'
         print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
         for data, data_filter in tqdm(p.imap(save_data_app, df.iterrows()), total=df.shape[0]):
             list_data.append(data)
             list_data_filter.append(data_filter)
     
+    
     data = xr.concat(list_data, dim='ts_id')
+    data = data.merge(df.to_xarray())
+
     data_filter = xr.concat(list_data_filter, dim='ts_id')
-    # data = pd.concat(list_data, axis='index')
-    # data_filter = pd.concat(list_data_filter, axis='index')
+    data_filter = data_filter.merge(df.to_xarray())
 
     print(f'\nSave SAR data from {path.split("/")[-1]}...')
     data.to_netcdf(f'{save_folder}/{path.split("/")[-1].split(".")[0]}.nc', engine='scipy')
@@ -161,7 +153,6 @@ def make_data(path, save_folder):
     print(f'\nSAR data from {path.split("/")[-1]} saved!')
 
 if __name__ == '__main__':
-    # pandarallel.initialize(progress_bar=True, nb_workers=16)
     save_folder = create_folders()
 
     train_path = '../data/raw/train.csv'
