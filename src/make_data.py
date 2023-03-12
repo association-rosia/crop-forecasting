@@ -19,7 +19,8 @@ from random import uniform, random
 # Make data constants
 SIZE = 'adaptative' # 'fixed'
 FACTOR = 1 # for 'adaptative' 
-AUGMENT = 10
+NUM_AUGMENT = 50
+MAX_AUGMENT = 7
 DEGREE = 0.0014589825157734703 # = ha_to_degree(2.622685) # Field size (ha) mean = 2.622685 (train + test)
 
 dict_band_name = {
@@ -42,8 +43,8 @@ def ha_to_degree(field_size): # Field_size (ha)
 
 
 def create_folders() -> str:
-    if AUGMENT > 1:
-        save_folder = f'../data/processed/augment_{AUGMENT}'
+    if NUM_AUGMENT > 1:
+        save_folder = f'../data/processed/augment_{NUM_AUGMENT}_{MAX_AUGMENT}'
     elif SIZE == 'fixed':
         degree = str(round(DEGREE, 5)).replace(".", "-")
         save_folder = f'../data/processed/fixed_{degree}'
@@ -57,7 +58,7 @@ def create_folders() -> str:
 def get_factors(max_factor=5):
     factors = []
     for _ in range(4):
-        factor = uniform(1, max_factor)
+        factor = uniform(1, MAX_AUGMENT)
         if random() < 0.5: factor = 1 / factor
         factors.append(factor)
         
@@ -164,7 +165,7 @@ if __name__ == '__main__':
     save_folder = create_folders()
 
     train_path = '../data/raw/train.csv'
-    make_data(train_path, save_folder, augment=AUGMENT)
+    make_data(train_path, save_folder, augment=NUM_AUGMENT)
 
     test_path = '../data/raw/test.csv'
     make_data(test_path, save_folder, augment=1)

@@ -2,10 +2,12 @@ import xarray as xr
 import numpy as np
 from scipy.signal import savgol_filter
 
+FOLDER = 'augment_10_5'
 
-def compute_vi(xdf: xr.Dataset)->xr.Dataset:
 
-    def compute_ndvi(xdf: xr.Dataset)->xr.Dataset:
+def compute_vi(xdf: xr.Dataset) -> xr.Dataset:
+
+    def compute_ndvi(xdf: xr.Dataset) -> xr.Dataset:
         return (xdf.nir - xdf.red) / (xdf.nir + xdf.red)
 
     def compute_savi(xdf, L=0.5):
@@ -14,20 +16,20 @@ def compute_vi(xdf: xr.Dataset)->xr.Dataset:
     def compute_evi(xdf, G=2.5, L=1, C1=6, C2=7.5):
         return G * (xdf.nir - xdf.red) / (xdf.nir + C1 * xdf.red - C2 * xdf.blue + L)
 
-    def compute_rep(xdf: xr.Dataset)->xr.Dataset:
+    def compute_rep(xdf: xr.Dataset) -> xr.Dataset:
         rededge = (xdf.red + xdf.rededge3) / 2
         return 704 + 35 * (rededge - xdf.rededge1) / (xdf.rededge2 - xdf.rededge1)
 
-    def compute_osavi(xdf: xr.Dataset)->xr.Dataset:
+    def compute_osavi(xdf: xr.Dataset) -> xr.Dataset:
         return (xdf.nir - xdf.red) / (xdf.nir + xdf.red + 0.16)
 
-    def compute_rdvi(xdf: xr.Dataset)->xr.Dataset:
+    def compute_rdvi(xdf: xr.Dataset) -> xr.Dataset:
         return (xdf.nir - xdf.red) / np.sqrt(xdf.nir + xdf.red)
 
-    def compute_mtvi1(xdf: xr.Dataset)->xr.Dataset:
+    def compute_mtvi1(xdf: xr.Dataset) -> xr.Dataset:
         return 1.2 * (1.2 * (xdf.nir - xdf.green) - 2.5 * (xdf.red - xdf.green))
 
-    def compute_lswi(xdf: xr.Dataset)->xr.Dataset:
+    def compute_lswi(xdf: xr.Dataset) -> xr.Dataset:
         return (xdf.nir - xdf.swir) / (xdf.nir + xdf.swir)
 
     # list of satellite band
@@ -81,15 +83,14 @@ def process_data(path, fill=True):
     xdf.to_netcdf(path, engine='scipy')
 
 if __name__ == '__main__':
-
-    train_filter_path = '../data/processed/adaptative_factor_1/train_filter.nc'
+    train_filter_path = f'../data/processed/{FOLDER}/train_filter.nc'
     process_data(train_filter_path)
 
-    train_path = '../data/processed/adaptative_factor_1/train.nc'
+    train_path = f'../data/processed/{FOLDER}/train.nc'
     process_data(train_path, fill=False)
 
-    test_filter_path = '../data/processed/adaptative_factor_1/test_filter.nc'
+    test_filter_path = f'../data/processed/{FOLDER}/test_filter.nc'
     process_data(test_filter_path)
 
-    test_path = '../data/processed/adaptative_factor_1/test.nc'
+    test_path = f'../data/processed/{FOLDER}/test.nc'
     process_data(test_path, fill=False)
