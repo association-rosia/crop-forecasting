@@ -1,19 +1,27 @@
+from math import sqrt
+from tqdm import tqdm
+import joblib
 import warnings
 warnings.filterwarnings('ignore')
 
+from constants import FOLDER, S_COLUMNS, M_COLUMNS, G_COLUMNS
+
+import numpy as np
 import pandas as pd
+import xarray as xr
+
+import matplotlib.pyplot as plt
+
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader, random_split
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from constants import FOLDER, S_COLUMNS, M_COLUMNS, G_COLUMNS
-from math import sqrt
-import matplotlib.pyplot as plt
-from sklearn.metrics import r2_score
-import numpy as np 
-import wandb
-from tqdm import tqdm
 from dataloader import DLDataset
+
+from sklearn.metrics import r2_score
+
+import wandb
+
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.cuda.empty_cache()
@@ -27,8 +35,8 @@ def main():
             'hidden_size':128, # try 128 to 512
             'num_layers': 2, # try 1 to 4
             'learning_rate': 1e-3,
-            'dropout': 0.01,
-            'epochs': 1000,
+            'dropout': 0.1,
+            'epochs': 5000,
             'optimizer': 'AdamW', # try AdamW, LBFGS 
             'criterion': 'MSELoss', # try MSELoss, L1Loss, HuberLoss
             'val_rate': 0.2
@@ -52,93 +60,27 @@ def main():
     
     train_model(wandb.config, model, optimizer, scheduler, criterion, train_loader, val_loader)
     make_submission(model, test_loader)
-
-
-# class DLDataset(Dataset):
-#     def __init__(self, weather, vi, df, test=False, times=120):
-#         self.weather = weather
-#         self.vi = vi
-#         self.df = df
-#         self.test = test
-#         self.times = times
-
-#     def __len__(self):
-#         return len(self.df)
-
-#     def __getitem__(self, idx):
-#         row = self.df.iloc[idx]
-#         district = row['District']
-#         latitude = row['Latitude']
-#         longitude = row['Longitude']
-#         date_of_harvest = row['Date of Harvest']
-        
-#         vi = self.vi[(self.vi['District'] == district) &
-#                      (self.vi['Latitude'] == latitude) &
-#                      (self.vi['Longitude'] == longitude) &
-#                      (self.vi['Date of Harvest'] == date_of_harvest)]
-        
-#         vi['date'] = pd.to_datetime(vi['date'], format='%d-%m-%Y')
-#         all_dates = pd.date_range(vi['date'].min(), vi['date'].max(), freq='d').strftime('%d-%m-%Y')
-#         all_dates = all_dates.tolist()[-self.times:]
-        
-#         weather = self.weather[(self.weather['name'] == district) &
-#                                (self.weather['datetime'].isin(all_dates))]
-        
-#         weather['datetime'] = pd.to_datetime(weather['datetime'], format='%d-%m-%Y')
-        
-#         vi = vi.sort_values('date').reset_index(drop=True)
-#         not_vi_columns = ['District', 'Latitude', 'Longitude', 'Date of Harvest', 'date']
-#         vi = vi.drop(columns=not_vi_columns)
-#         s_input = torch.tensor(vi.values, dtype=torch.float)
-        
-#         weather = weather.sort_values('datetime').reset_index(drop=True)
-#         not_weather_columns = ['name', 'datetime']
-#         weather = weather.drop(columns=not_weather_columns)
-#         m_input = torch.tensor(weather.values, dtype=torch.float)
-        
-#         g_columns = ['Rice Crop Intensity(D=Double, T=Triple)', 'Field size (ha)']
-#         g_input = torch.tensor(row[g_columns].astype('float64').values, dtype=torch.float)
-        
-#         if self.test:
-#             label = row['Predicted Rice Yield (kg/ha)']
-#         else:
-#             label = row['Rice Yield (kg/ha)']
-        
-#         item = {
-#             'district': district, 
-#             'latitude': latitude, 
-#             'longitude': longitude, 
-#             'date_of_harvest': date_of_harvest,
-#             's_input': s_input,
-#             'm_input': m_input,
-#             'g_input': g_input,
-#             'labels': label
-#         }
-        
-#         return item
     
 
 def get_loaders(config, num_workers):
-    weather_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/weather_df.csv')
     batch_size = config['batch_size']
     val_rate = config['val_rate']
 
-    train_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/train_df.csv')
-    train_vi = pd.read_csv(f'../data/processed/lstm/{FOLDER}/train_vi.csv')
-    dataset = DLDataset(weather_df, train_vi, train_df)
+    dataset_path = f'../data/processed/{FOLDER}/train_filter_processed.nc'
+    xdf = xr.open_dataset(dataset_path, engine='scipy')
+    dataset = DLDataset(xdf.copy(deep=True))
     
-    train_size = len(dataset)
-    val_size = int(val_rate * train_size)
-    train_size = train_size - val_size
+    val_size = int(val_rate * dataset.__len__)
+    train_size = dataset.__len__ - val_size
     
     generator = torch.Generator()
-    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size], generator=generator)
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=generator)
     train_loader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
 
-    test_df = pd.read_csv(f'../data/processed/lstm/{FOLDER}/test_df.csv')
-    test_vi = pd.read_csv(f'../data/processed/lstm/{FOLDER}/test_vi.csv')
-    test_dataset = DLDataset(weather_df, test_vi, test_df)
+    dataset_path = f'../data/processed/{FOLDER}/test_filter_processed.nc'
+    xdf = xr.open_dataset(dataset_path, engine='scipy')
+    test_dataset = DLDataset(xdf.copy(deep=True))
     
     test_loader = DataLoader(test_dataset, batch_size=1, num_workers=num_workers)
     
@@ -165,7 +107,7 @@ class LSTMModel(nn.Module):
 
         self.s_num_features = config['s_num_features']
         self.m_num_features = config['m_num_features']
-        self.g_in_features = config['g_in_features']
+        # self.g_in_features = config['g_in_features']
         self.c_in_features = config['c_in_features']
         
         self.s_lstm = nn.LSTM(self.s_num_features, self.hidden_size, self.num_layers, batch_first=True)
@@ -175,12 +117,15 @@ class LSTMModel(nn.Module):
         self.cnn = nn.Conv1d(1, 1, kernel_size=3)
         self.bn_cnn = nn.BatchNorm1d(self.hidden_size - 2) # because kernel_size = 3
         
-        self.g_linear = nn.Linear(self.g_in_features, self.g_in_features)
-        self.g_bn = nn.BatchNorm1d(self.g_in_features)
+        # self.g_linear = nn.Linear(self.g_in_features, self.g_in_features)
+        # self.g_bn = nn.BatchNorm1d(self.g_in_features)
         
-        self.c_linear_1 = nn.Linear(self.c_in_features, 2*self.c_in_features)
-        self.c_linear_2 = nn.Linear(2*self.c_in_features, 2*self.c_in_features)
-        self.c_linear_3 = nn.Linear(2*self.c_in_features, 1)
+        self.c_linear_1 = nn.Linear(self.c_in_features, 4*self.c_in_features)
+        self.c_linear_2 = nn.Linear(4*self.c_in_features, 4*self.c_in_features)
+        self.c_linear_3 = nn.Linear(4*self.c_in_features, 2*self.c_in_features)
+        self.c_linear_4 = nn.Linear(2*self.c_in_features, 2*self.c_in_features)
+        self.c_linear_5 = nn.Linear(2*self.c_in_features, self.c_in_features)
+        self.c_linear_6 = nn.Linear(self.c_in_features, 1)
         
         self.tanh = nn.Tanh()
         self.relu = nn.ReLU()
@@ -224,21 +169,30 @@ class LSTMModel(nn.Module):
         m_output = self.relu(m_output)
         m_output = self.dropout(m_output)
         
-        # Geo FC
-        g_output = self.g_linear(g_input)
-        g_output = self.g_bn(g_output)
-        g_output = self.relu(g_output)
-        g_output = self.dropout(g_output)
+        # # Geo FC
+        # g_output = self.g_linear(g_input)
+        # g_output = self.g_bn(g_output)
+        # g_output = self.relu(g_output)
+        # g_output = self.dropout(g_output)
         
         # Concatanate inputs
-        c_input = torch.cat((s_output, m_output, g_output), 1)
+        c_input = torch.cat((s_output, m_output, g_input), 1)
         c_output = self.c_linear_1(c_input)
         c_output = self.relu(c_output)
         c_output = self.dropout(c_output)
         c_output = self.c_linear_2(c_output)
         c_output = self.relu(c_output)
         c_output = self.dropout(c_output)
-        output = self.c_linear_3(c_output)
+        c_output = self.c_linear_3(c_output)
+        c_output = self.relu(c_output)
+        c_output = self.dropout(c_output)
+        c_output = self.c_linear_4(c_output)
+        c_output = self.relu(c_output)
+        c_output = self.dropout(c_output)
+        c_output = self.c_linear_5(c_output)
+        c_output = self.relu(c_output)
+        c_output = self.dropout(c_output)
+        output = self.c_linear_6(c_output)
         
         return output
     
@@ -340,7 +294,7 @@ def make_submission(model, test_loader):
                         (test_df['Date of Harvest'] == date_of_harvest),
                         'Predicted Rice Yield (kg/ha)'] = output.item()
 
-    label_scaler = joblib.load(f'../data/processed/lstm/{FOLDER}/label_scaler.joblib')
+    label_scaler = joblib.load(f'../data/processed/lstm/{FOLDER}/scaler_t.joblib')
     test_df['Predicted Rice Yield (kg/ha)'] = label_scaler.inverse_transform(test_df[['Predicted Rice Yield (kg/ha)']])
     test_df.to_csv('submission.csv', index=False)
         
