@@ -109,6 +109,7 @@ def features_modification(xdf: xr.Dataset)->xr.Dataset:
 
     xdf['time'] = xdf['time'].astype(np.datetime64)
     xdf['datetime'] = xdf['datetime'].astype(np.datetime64)
+    xdf = xdf.reset_coords('time')
 
     return xdf
 
