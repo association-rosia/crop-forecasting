@@ -22,7 +22,7 @@ TARGET = 'Rice Yield (kg/ha)'
 
 
 def add_weather(xdf: xr.Dataset)->xr.Dataset:
-    xdf = xdf.set_coords('District')
+    xdf = xdf#.set_coords('District')
 
     weather = []
     for path in glob.glob('../data/raw/weather/*.csv'):
@@ -120,9 +120,9 @@ def scale_data(xdf: xr.Dataset, path: str, test: bool)->xr.Dataset:
     if not test:
         # Scale S data
         scaler_s = StandardScaler()
-        df = xdf[S_COLUMNS].to_dataframe()
+        df = xdf.reset_coords('District')[S_COLUMNS].to_dataframe()
         df.loc[:, S_COLUMNS] = scaler_s.fit_transform(df[S_COLUMNS])
-        xdf_scale = df.to_xarray().set_coords('District')
+        xdf_scale = df.to_xarray()
         xdf = xr.merge([xdf_scale, xdf], compat='override')
         joblib.dump(scaler_s, path_s)
 
@@ -152,7 +152,7 @@ def scale_data(xdf: xr.Dataset, path: str, test: bool)->xr.Dataset:
         scaler_s = joblib.load(path_s)
         df = xdf[S_COLUMNS].to_dataframe()
         df.loc[:, S_COLUMNS] = scaler_s.transform(df[S_COLUMNS])
-        xdf_scale = df.to_xarray().set_coords('District')
+        xdf_scale = df.to_xarray()
         xdf = xr.merge([xdf_scale, xdf], compat='override')
 
         # Scale G data
@@ -171,7 +171,8 @@ def scale_data(xdf: xr.Dataset, path: str, test: bool)->xr.Dataset:
 
     return xdf
 
-def process_data(path, test: bool=False):
+
+def process_data(path: str, test: bool=False):
     xdf = xr.open_dataset(path)
     # Add weather to the dataset
     xdf = add_weather(xdf)
