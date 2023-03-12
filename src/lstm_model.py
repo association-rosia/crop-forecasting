@@ -13,6 +13,7 @@ from sklearn.metrics import r2_score
 import numpy as np 
 import wandb
 from tqdm import tqdm
+from dataloader import DLDataset
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.cuda.empty_cache()
@@ -26,8 +27,8 @@ def main():
             'hidden_size':128, # try 128 to 512
             'num_layers': 2, # try 1 to 4
             'learning_rate': 1e-3,
-            'dropout': 0.1,
-            'epochs': 5000,
+            'dropout': 0.01,
+            'epochs': 1000,
             'optimizer': 'AdamW', # try AdamW, LBFGS 
             'criterion': 'MSELoss', # try MSELoss, L1Loss, HuberLoss
             'val_rate': 0.2
@@ -53,68 +54,68 @@ def main():
     make_submission(model, test_loader)
 
 
-class DLDataset(Dataset):
-    def __init__(self, weather, vi, df, test=False, times=120):
-        self.weather = weather
-        self.vi = vi
-        self.df = df
-        self.test = test
-        self.times = times
+# class DLDataset(Dataset):
+#     def __init__(self, weather, vi, df, test=False, times=120):
+#         self.weather = weather
+#         self.vi = vi
+#         self.df = df
+#         self.test = test
+#         self.times = times
 
-    def __len__(self):
-        return len(self.df)
+#     def __len__(self):
+#         return len(self.df)
 
-    def __getitem__(self, idx):
-        row = self.df.iloc[idx]
-        district = row['District']
-        latitude = row['Latitude']
-        longitude = row['Longitude']
-        date_of_harvest = row['Date of Harvest']
+#     def __getitem__(self, idx):
+#         row = self.df.iloc[idx]
+#         district = row['District']
+#         latitude = row['Latitude']
+#         longitude = row['Longitude']
+#         date_of_harvest = row['Date of Harvest']
         
-        vi = self.vi[(self.vi['District'] == district) &
-                     (self.vi['Latitude'] == latitude) &
-                     (self.vi['Longitude'] == longitude) &
-                     (self.vi['Date of Harvest'] == date_of_harvest)]
+#         vi = self.vi[(self.vi['District'] == district) &
+#                      (self.vi['Latitude'] == latitude) &
+#                      (self.vi['Longitude'] == longitude) &
+#                      (self.vi['Date of Harvest'] == date_of_harvest)]
         
-        vi['date'] = pd.to_datetime(vi['date'], format='%d-%m-%Y')
-        all_dates = pd.date_range(vi['date'].min(), vi['date'].max(), freq='d').strftime('%d-%m-%Y')
-        all_dates = all_dates.tolist()[-self.times:]
+#         vi['date'] = pd.to_datetime(vi['date'], format='%d-%m-%Y')
+#         all_dates = pd.date_range(vi['date'].min(), vi['date'].max(), freq='d').strftime('%d-%m-%Y')
+#         all_dates = all_dates.tolist()[-self.times:]
         
-        weather = self.weather[(self.weather['name'] == district) &
-                               (self.weather['datetime'].isin(all_dates))]
+#         weather = self.weather[(self.weather['name'] == district) &
+#                                (self.weather['datetime'].isin(all_dates))]
         
-        weather['datetime'] = pd.to_datetime(weather['datetime'], format='%d-%m-%Y')
+#         weather['datetime'] = pd.to_datetime(weather['datetime'], format='%d-%m-%Y')
         
-        vi = vi.sort_values('date').reset_index(drop=True)
-        not_vi_columns = ['District', 'Latitude', 'Longitude', 'Date of Harvest', 'date']
-        vi = vi.drop(columns=not_vi_columns)
-        s_input = torch.tensor(vi.values, dtype=torch.float)
+#         vi = vi.sort_values('date').reset_index(drop=True)
+#         not_vi_columns = ['District', 'Latitude', 'Longitude', 'Date of Harvest', 'date']
+#         vi = vi.drop(columns=not_vi_columns)
+#         s_input = torch.tensor(vi.values, dtype=torch.float)
         
-        weather = weather.sort_values('datetime').reset_index(drop=True)
-        not_weather_columns = ['name', 'datetime']
-        weather = weather.drop(columns=not_weather_columns)
-        m_input = torch.tensor(weather.values, dtype=torch.float)
+#         weather = weather.sort_values('datetime').reset_index(drop=True)
+#         not_weather_columns = ['name', 'datetime']
+#         weather = weather.drop(columns=not_weather_columns)
+#         m_input = torch.tensor(weather.values, dtype=torch.float)
         
-        g_columns = ['Rice Crop Intensity(D=Double, T=Triple)', 'Field size (ha)']
-        g_input = torch.tensor(row[g_columns].astype('float64').values, dtype=torch.float)
+#         g_columns = ['Rice Crop Intensity(D=Double, T=Triple)', 'Field size (ha)']
+#         g_input = torch.tensor(row[g_columns].astype('float64').values, dtype=torch.float)
         
-        if self.test:
-            label = row['Predicted Rice Yield (kg/ha)']
-        else:
-            label = row['Rice Yield (kg/ha)']
+#         if self.test:
+#             label = row['Predicted Rice Yield (kg/ha)']
+#         else:
+#             label = row['Rice Yield (kg/ha)']
         
-        item = {
-            'district': district, 
-            'latitude': latitude, 
-            'longitude': longitude, 
-            'date_of_harvest': date_of_harvest,
-            's_input': s_input,
-            'm_input': m_input,
-            'g_input': g_input,
-            'labels': label
-        }
+#         item = {
+#             'district': district, 
+#             'latitude': latitude, 
+#             'longitude': longitude, 
+#             'date_of_harvest': date_of_harvest,
+#             's_input': s_input,
+#             'm_input': m_input,
+#             'g_input': g_input,
+#             'labels': label
+#         }
         
-        return item
+#         return item
     
 
 def get_loaders(config, num_workers):
@@ -179,8 +180,7 @@ class LSTMModel(nn.Module):
         
         self.c_linear_1 = nn.Linear(self.c_in_features, 2*self.c_in_features)
         self.c_linear_2 = nn.Linear(2*self.c_in_features, 2*self.c_in_features)
-        self.c_linear_3 = nn.Linear(2*self.c_in_features, self.c_in_features)
-        self.c_linear_4 = nn.Linear(self.c_in_features, 1)
+        self.c_linear_3 = nn.Linear(2*self.c_in_features, 1)
         
         self.tanh = nn.Tanh()
         self.relu = nn.ReLU()
@@ -198,7 +198,7 @@ class LSTMModel(nn.Module):
         s_output, _ = self.s_lstm(s_input, (s_h0, s_c0))        
         s_output = self.bn_lstm(s_output[:, -1, :])
         s_output = self.tanh(s_output)
-        # s_output = self.dropout(s_output)
+        s_output = self.dropout(s_output)
         
         # Meteo LSTM
         m_h0 = torch.zeros(self.num_layers, m_input.size(0), self.hidden_size).requires_grad_().to(DEVICE)
@@ -206,7 +206,7 @@ class LSTMModel(nn.Module):
         m_output, _ = self.m_lstm(m_input, (m_h0, m_c0))        
         m_output = self.bn_lstm(m_output[:, -1, :])
         m_output = self.tanh(m_output)
-        # m_output = self.dropout(m_output)
+        m_output = self.dropout(m_output)
         
         # Spectral Conv1D
         s_output = torch.unsqueeze(s_output, 1) # (batch_size, num_layers) to (batch_size, 1, num_layers)        
@@ -214,7 +214,7 @@ class LSTMModel(nn.Module):
         s_output = torch.squeeze(s_output) # (batch_size, 1, num_layers - 2) to (batch_size, num_layers - 2)           
         s_output = self.bn_cnn(s_output)
         s_output = self.relu(s_output)
-        # s_output = self.dropout(s_output)
+        s_output = self.dropout(s_output)
         
         # Meteo Conv1D
         m_output = torch.unsqueeze(m_output, 1)    
@@ -222,13 +222,13 @@ class LSTMModel(nn.Module):
         m_output = torch.squeeze(m_output)        
         m_output = self.bn_cnn(m_output)
         m_output = self.relu(m_output)
-        # m_output = self.dropout(m_output)
+        m_output = self.dropout(m_output)
         
         # Geo FC
         g_output = self.g_linear(g_input)
         g_output = self.g_bn(g_output)
         g_output = self.relu(g_output)
-        # g_output = self.dropout(g_output)
+        g_output = self.dropout(g_output)
         
         # Concatanate inputs
         c_input = torch.cat((s_output, m_output, g_output), 1)
@@ -238,10 +238,7 @@ class LSTMModel(nn.Module):
         c_output = self.c_linear_2(c_output)
         c_output = self.relu(c_output)
         c_output = self.dropout(c_output)
-        c_output = self.c_linear_3(c_output)
-        c_output = self.relu(c_output)
-        c_output = self.dropout(c_output)
-        output = self.c_linear_4(c_output)
+        output = self.c_linear_3(c_output)
         
         return output
     
