@@ -12,12 +12,21 @@ import planetary_computer as pc
 from odc.stac import stac_load
 
 import multiprocessing as mp
+from random import uniform, random
 
 
 # Make data constants
 SIZE = 'adaptative' # 'fixed'
-FACTOR = 3
+FACTOR = 1 # for 'adaptative' 
+AUGMENT = 10
 DEGREE = 0.0014589825157734703 # = ha_to_degree(2.622685) # Field size (ha) mean = 2.622685 (train + test)
+
+dict_band_name = {
+    'B05': 'rededge1',
+    'B06': 'rededge2',
+    'B07': 'rededge3',
+    'B11': 'swir'
+}
 
 
 def ha_to_degree(field_size): # Field_size (ha)
@@ -32,9 +41,10 @@ def ha_to_degree(field_size): # Field_size (ha)
     return degree
 
 
-def create_folders()->str:
-    # os.makedirs('../../data/processed', exist_ok=True)
-    if SIZE == 'fixed':
+def create_folders() -> str:
+    if AUGMENT > 1:
+        save_folder = f'../data/processed/augment_{AUGMENT}'
+    elif SIZE == 'fixed':
         degree = str(round(DEGREE, 5)).replace(".", "-")
         save_folder = f'../data/processed/fixed_{degree}'
     elif SIZE == 'adaptative':
@@ -44,12 +54,15 @@ def create_folders()->str:
     return save_folder
 
 
-dict_band_name = {
-    'B05': 'rededge1',
-    'B06': 'rededge2',
-    'B07': 'rededge3',
-    'B11': 'swir'
-}
+def get_factors(max_factor=5):
+    factors = []
+    for _ in range(4):
+        factor = uniform(1, max_factor)
+        if random() < 0.5: factor = 1 / factor
+        factors.append(factor)
+
+    return factors
+
 
 def get_bbox(longitude, latitude, field_size):
     if SIZE == 'fixed':
@@ -57,10 +70,12 @@ def get_bbox(longitude, latitude, field_size):
     elif SIZE == 'adaptative':
         degree = ha_to_degree(field_size) * FACTOR
         
-    min_longitude = longitude - degree / 2
-    min_latitude = latitude - degree / 2
-    max_longitude = longitude + degree / 2
-    max_latitude = latitude + degree / 2 
+    length = degree / 2
+    factors = get_factors()
+    min_longitude = longitude - factors[0] * length
+    min_latitude = latitude - factors[1] * length
+    max_longitude = longitude + factors[2] * length
+    max_latitude = latitude + factors[3] * length
     
     return (min_longitude, min_latitude, max_longitude, max_latitude)
 
@@ -107,14 +122,13 @@ def save_data(row, history_days, history_dates, resolution):
     
     data = get_data(bbox, time_period, bands, scale)
 
-    cloud_mask = \
-        (data.SCL != 0) & \
-        (data.SCL != 1) & \
-        (data.SCL != 3) & \
-        (data.SCL != 6) & \
-        (data.SCL != 8) & \
-        (data.SCL != 9) & \
-        (data.SCL != 10)
+    cloud_mask = ((data.SCL != 0) & 
+                  (data.SCL != 1) & 
+                  (data.SCL != 3) & 
+                  (data.SCL != 6) & 
+                  (data.SCL != 8) & 
+                  (data.SCL != 9) & 
+                  (data.SCL != 10))
 
     data_filter = data.copy(deep=True).where(cloud_mask)
     data = process_data(data, row, history_dates)
@@ -127,19 +141,19 @@ def save_data_app(index_row, history_days=130, history_dates=24, resolution=10):
     data, data_filter = save_data(index_row[1], history_days, history_dates, resolution)
     return data, data_filter
 
-def make_data(path, save_folder):
+def make_data(path, save_folder, augment):
     list_data = []
     list_data_filter = []
     df = None
 
     with mp.Pool(8) as p:
         df = pd.read_csv(path)
+        df = pd.concat(augment * [df], ignore_index=True)
         df.index.name = 'ts_id'
         print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
         for data, data_filter in tqdm(p.imap(save_data_app, df.iterrows()), total=df.shape[0]):
             list_data.append(data)
             list_data_filter.append(data_filter)
-    
     
     data = xr.concat(list_data, dim='ts_id')
     data = data.merge(df.to_xarray())
@@ -156,7 +170,7 @@ if __name__ == '__main__':
     save_folder = create_folders()
 
     train_path = '../data/raw/train.csv'
-    make_data(train_path, save_folder)
+    make_data(train_path, save_folder, augment=AUGMENT)
 
     test_path = '../data/raw/test.csv'
-    make_data(test_path, save_folder)
+    make_data(test_path, save_folder, augment=1)

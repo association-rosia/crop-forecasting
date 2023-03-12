@@ -199,9 +199,9 @@ def process_data(path: str, test: bool=False):
 if __name__ == '__main__':
 
     # Cloud filtered data
-    train_filter_path = '../data/processed/adaptative_factor_2/train_filter.nc'
+    train_filter_path = '../data/processed/augment_10_5/train_filter.nc'
     process_data(train_filter_path)
-    test_filter_path = '../data/processed/adaptative_factor_2/test_filter.nc'
+    test_filter_path = '../data/processed/augment_10_5/test_filter.nc'
     process_data(test_filter_path, test=True)
 
     # train_path = '../data/processed/adaptative_factor_1/train.nc'
