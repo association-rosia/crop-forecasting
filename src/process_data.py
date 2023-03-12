@@ -31,10 +31,10 @@ def add_weather(xdf: xr.Dataset)->xr.Dataset:
     df_weather = pd.concat(weather, axis='index')
     df_weather['datetime'] = pd.to_datetime(df_weather['datetime'])
     df_weather['name'] = df_weather['name'].str.replace(' ', '_')
-    df_weather = df_weather.rename(columns={'datetime': 'time'})
-    df_weather.set_index(['time', 'name'], inplace=True)
-    xdf_weather = df_weather.to_xarray().set_coords(['time', 'name'])
-    xdf_weather['time'] = xdf_weather['time'].dt.strftime('%Y-%m-%d')
+    # df_weather = df_weather.rename(columns={'datetime': 'time'})
+    df_weather.set_index(['datetime', 'name'], inplace=True)
+    xdf_weather = df_weather.to_xarray().set_coords(['datetime', 'name'])
+    xdf_weather['datetime'] = xdf_weather['datetime'].dt.strftime('%Y-%m-%d')
 
     xdf = xr.merge([xdf, xdf_weather])
 
@@ -101,11 +101,14 @@ def categorical_encoding(xdf: xr.Dataset)->xr.Dataset:
     return xdf
 
 
-def features_augmentation(xdf: xr.Dataset)->xr.Dataset:
+def features_modification(xdf: xr.Dataset)->xr.Dataset:
     xdf['sunrise'] = xdf['sunrise'].astype(np.datetime64)
     xdf['sunset'] = xdf['sunset'].astype(np.datetime64)
 
     xdf['solarexposure'] = (xdf['sunset'] - xdf['sunrise']).dt.seconds
+
+    xdf['time'] = xdf['time'].astype(np.datetime64)
+    xdf['datetime'] = xdf['datetime'].astype(np.datetime64)
 
     return xdf
 
@@ -183,7 +186,7 @@ def process_data(path: str, test: bool=False):
     # Smooth variable
     xdf = smooth(xdf)
     # Create new features
-    xdf = features_augmentation(xdf)
+    xdf = features_modification(xdf)
     # Encode categorical features
     xdf = categorical_encoding(xdf)
     # Scale data
