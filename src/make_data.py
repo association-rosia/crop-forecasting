@@ -42,14 +42,15 @@ def ha_to_degree(field_size): # Field_size (ha)
 
 
 def create_folders() -> str:
-    if AUGMENT > 1:
-        save_folder = f'../data/processed/augment_{AUGMENT}'
-    elif SIZE == 'fixed':
+    save_folder = '../data/processed/'
+    if SIZE == 'fixed':
         degree = str(round(DEGREE, 5)).replace(".", "-")
-        save_folder = f'../data/processed/fixed_{degree}'
+        save_folder += f'fixed_{degree}'
     elif SIZE == 'adaptative':
-        save_folder = f'../data/processed/adaptative_factor_{FACTOR}'
-        
+        save_folder += f'adaptative_{FACTOR}'
+    if AUGMENT > 1:
+        save_folder += f'_augment_{AUGMENT}'
+
     os.makedirs(save_folder, exist_ok=True)
     return save_folder
 
