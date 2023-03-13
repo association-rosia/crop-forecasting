@@ -146,7 +146,7 @@ def init_df(df: pd.DataFrame, path: str, history_dates: int= 24)->pd.Index:
 
     if os.path.exists(path=path):
         xdf = xr.open_dataset(path, engine='scipy')
-        unique, counts = np.unique(xdf['id_obs'].values, return_counts=True)
+        unique, counts = np.unique(xdf['ts_obs'].values, return_counts=True)
         counts = counts / history_dates
         index_count -= pd.Series(counts, index=unique)
         index_count.fillna(NUM_AUGMENT, inplace=True)
