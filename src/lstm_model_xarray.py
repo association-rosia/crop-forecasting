@@ -26,6 +26,29 @@ import wandb
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.cuda.empty_cache()
 
+def get_loaders(config, num_workers):
+    batch_size = config['batch_size']
+    val_rate = config['val_rate']
+
+    dataset_path = f'../data/processed/{FOLDER}/train_filter_processed.nc'
+    xdf = xr.open_dataset(dataset_path, engine='scipy')
+    dataset = DLDataset(xdf.copy(deep=True))
+    
+    val_size = int(val_rate * len(dataset))
+    train_size = len(dataset) - val_size
+    
+    generator = torch.Generator()
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=generator)
+    train_loader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
+
+    dataset_path = f'../data/processed/{FOLDER}/test_filter_processed.nc'
+    xdf = xr.open_dataset(dataset_path, engine='scipy')
+    test_dataset = DLDataset(xdf.copy(deep=True))
+    
+    test_loader = DataLoader(test_dataset, batch_size=1, num_workers=num_workers)
+    
+    return train_loader, val_loader, test_loader
 
 def main():
     wandb.init(
@@ -60,31 +83,6 @@ def main():
     
     train_model(wandb.config, model, optimizer, scheduler, criterion, train_loader, val_loader)
     make_submission(model, test_loader)
-    
-
-def get_loaders(config, num_workers):
-    batch_size = config['batch_size']
-    val_rate = config['val_rate']
-
-    dataset_path = f'../data/processed/{FOLDER}/train_filter_processed.nc'
-    xdf = xr.open_dataset(dataset_path, engine='scipy')
-    dataset = DLDataset(xdf.copy(deep=True))
-    
-    val_size = int(val_rate * dataset.__len__)
-    train_size = dataset.__len__ - val_size
-    
-    generator = torch.Generator()
-    train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=generator)
-    train_loader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
-
-    dataset_path = f'../data/processed/{FOLDER}/test_filter_processed.nc'
-    xdf = xr.open_dataset(dataset_path, engine='scipy')
-    test_dataset = DLDataset(xdf.copy(deep=True))
-    
-    test_loader = DataLoader(test_dataset, batch_size=1, num_workers=num_workers)
-    
-    return train_loader, val_loader, test_loader
 
 
 def get_criterion(config):
@@ -107,7 +105,7 @@ class LSTMModel(nn.Module):
 
         self.s_num_features = config['s_num_features']
         self.m_num_features = config['m_num_features']
-        # self.g_in_features = config['g_in_features']
+        self.g_in_features = config['g_in_features']
         self.c_in_features = config['c_in_features']
         
         self.s_lstm = nn.LSTM(self.s_num_features, self.hidden_size, self.num_layers, batch_first=True)
@@ -197,34 +195,45 @@ class LSTMModel(nn.Module):
         return output
     
     
-def train_epoch(model, optimizer, criterion, train_loader):
-    train_loss = 0
+def train_one_epoch(model, optimizer, criterion, train_loader):
+    train_loss = 0.
     
-    for data in train_loader:
+    pbar = tqdm(train_loader, leave=False)
+    for i, data in enumerate(pbar):
         keys_input = ['s_input', 'm_input', 'g_input']
         inputs = {key: data[key].to(DEVICE) for key in keys_input}
         labels = data['labels'].float().to(DEVICE)
 
+        # Zero gradients for every batch
         optimizer.zero_grad()
+
+        # Make predictions for this batch
         outputs = model(inputs)
         
+        # Compute the loss and its gradients
         loss = criterion(outputs, labels)
-        train_loss += loss.item()
         loss.backward()
-        
+
+        # Adjust learning weights
         optimizer.step()
+
+        train_loss += loss.item()
+        pbar.set_description(f'Batch: i/{len(train_loader)} Epoch Loss: {train_loss / i}, Batch Loss: {loss.item()}')
         
     train_loss /= len(train_loader)
     
     return train_loss
 
 
-def val_epoch(model, criterion, val_loader):
-    val_loss = 0
+def val_one_epoch(model, criterion, val_loader):
+    val_loss = 0.
     val_labels = []
     val_preds = []
     
-    for data in val_loader:
+    model.eval()
+
+    pbar = tqdm(val_loader, leave=False)
+    for i, data in enumerate(pbar):
         keys_input = ['s_input', 'm_input', 'g_input']
         inputs = {key: data[key].to(DEVICE) for key in keys_input}
         labels = data['labels'].float().to(DEVICE)
@@ -236,6 +245,8 @@ def val_epoch(model, criterion, val_loader):
         
         val_labels += labels.tolist()
         val_preds += outputs.tolist()
+
+        pbar.set_description(f'Batch: i/{len(val_loader)} Epoch Loss: {val_loss / i}, Batch Loss: {loss.item()}')
         
     val_loss /= len(val_loader)
     val_r2_score = r2_score(val_labels, val_preds)
@@ -253,17 +264,19 @@ def train_model(config, model, optimizer, scheduler, criterion, train_loader, va
     val_losses = []
     
     model.train()
-    for epoch in range(epochs):
-        print(f'\n--- EPOCH {epoch+1}/{epochs} ---')
-        train_loss = train_epoch(model, optimizer, criterion, train_loader)
+
+    iter_epoch = tqdm(range(epochs), leave=False)
+    for epoch in iter_epoch:
+        iter_epoch.set_description(f'--- EPOCH {epoch+1}/{epochs} --- ')
+        train_loss = train_one_epoch(model, optimizer, criterion, train_loader)
         train_losses.append(train_loss)
 
-        val_loss, val_r2_score = val_epoch(model, criterion, val_loader)
+        val_loss, val_r2_score = val_one_epoch(model, criterion, val_loader)
         scheduler.step(val_loss)
         val_losses.append(val_loss)
 
         wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'val_r2_score': val_r2_score})
-        print(f'Train = {train_loss:.5f} - Val = {val_loss:.5f} - Val R2 = {val_r2_score:.5f}')
+        iter_epoch.write(f'EPOCH {epoch+1}/{epochs}: Train = {train_loss:.5f} - Val = {val_loss:.5f} - Val R2 = {val_r2_score:.5f}')
 
         
 def round_prediction():

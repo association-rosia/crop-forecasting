@@ -103,9 +103,8 @@ def process_data(xds: xr.Dataset, row: pd.Series, history_dates:int)->xr.Dataset
     xds['state_dev'] =  ('time', np.arange(history_dates)[::-1])
     xds = xds.swap_dims({'time': 'state_dev'})
     xds = xds.rename_vars(dict_band_name)
-    xds = xds.expand_dims({'ts_id': 1})
-    xds['ts_id'] = [row.name]
-
+    xds = xds.expand_dims({'ts_id': 1, 'ts_obs': 1})
+    xds['ts_obs'] = [row.name]
     return xds
 
 
@@ -131,47 +130,60 @@ def save_data(row, history_days, history_dates, resolution):
                   (data.SCL != 9) & 
                   (data.SCL != 10))
 
-    data_filter = data.copy(deep=True).where(cloud_mask)
+    data = data.where(cloud_mask)
     data = process_data(data, row, history_dates)
-    data_filter = process_data(data_filter, row, history_dates)
     
-    return data, data_filter
+    return data
 
 
 def save_data_app(index_row, history_days=130, history_dates=24, resolution=10):
-    data, data_filter = save_data(index_row[1], history_days, history_dates, resolution)
-    return data, data_filter
+    for i in range(index_row[0][0]):
+        data = save_data(index_row[1][1], history_days, history_dates, resolution)
+    return data
+
+def get_index_count(df: pd.DataFrame, path: str)->pd.Index:
+    list_data = []
+    index_count = df.index.value_counts().sort_index(ascending=True) + NUM_AUGMENT - 1
+
+    if os.path.exists(path=path):
+        xdf = xr.open_dataset(path, engine='scipy')
+        unique, counts = np.unique(xdf['ts_obs'].values, return_counts=True)
+        index_count -= pd.Series(counts, index=unique).sort_index(ascending=True)
+        list_data.append(xdf)
+    
+    index_count = index_count[index_count != 0]
+    return index_count, list_data
 
 def make_data(path, save_folder, augment):
-    list_data = []
-    list_data_filter = []
-    df = None
+    save_file = f'{save_folder}/{path.split("/")[-1].split(".")[0]}.nc'
 
-    with mp.Pool(8) as p:
-        df = pd.read_csv(path)
-        df = pd.concat(augment * [df], ignore_index=True)
-        df.index.name = 'ts_id'
-        print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
-        for data, data_filter in tqdm(p.imap(save_data_app, df.iterrows()), total=df.shape[0]):
-            list_data.append(data)
-            list_data_filter.append(data_filter)
-    
-    data = xr.concat(list_data, dim='ts_id')
-    data = data.merge(df.to_xarray())
+    df: pd.DataFrame = pd.read_csv(path)
+    df.index.name = 'ts_obs'
+    # df.reset_index(inplace=True)
+    # df.index.name = 'ts_id'
 
-    data_filter = xr.concat(list_data_filter, dim='ts_id')
-    data_filter = data_filter.merge(df.to_xarray())
+    index_count, list_data = get_index_count(df, save_file)
+
+    print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
+    try:
+        with mp.Pool(8) as pool:
+            for data in tqdm(pool.imap(save_data_app, zip(index_count, df.iloc.iterrows())), total=index_count.sum()):
+                list_data.append(data)
+    except:
+        "Error occure during the data retrieval."
+    finally:
+        data = xr.concat(list_data, dim='ts_id')
+        data = data.merge(df.to_xarray())
 
     print(f'\nSave SAR data from {path.split("/")[-1]}...')
-    data.to_netcdf(f'{save_folder}/{path.split("/")[-1].split(".")[0]}.nc', engine='scipy')
-    data_filter.to_netcdf(f'{save_folder}/{path.split("/")[-1].split(".")[0]}_filter.nc', engine='scipy')
+    data.to_netcdf(save_file, engine='scipy')
     print(f'\nSAR data from {path.split("/")[-1]} saved!')
 
 if __name__ == '__main__':
     save_folder = create_folders()
 
-    train_path = '../data/raw/train.csv'
+    train_path = 'data/raw/train.csv'
     make_data(train_path, save_folder, augment=NUM_AUGMENT)
 
-    test_path = '../data/raw/test.csv'
+    test_path = 'data/raw/test.csv'
     make_data(test_path, save_folder, augment=1)
