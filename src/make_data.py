@@ -103,8 +103,9 @@ def process_data(xds: xr.Dataset, row: pd.Series, history_dates:int)->xr.Dataset
     xds['state_dev'] =  ('time', np.arange(history_dates)[::-1])
     xds = xds.swap_dims({'time': 'state_dev'})
     xds = xds.rename_vars(dict_band_name)
-    xds = xds.expand_dims({'ts_id': 1, 'id_obs': 1})
-    xds['id_obs'] = [row.name]
+    xds['id_obs'] = ('state_dev', [row.name] * xds['state_dev'].shape[0])
+    print(xds)
+    xds = xds.expand_dims({'ts_id': 1})
     return xds
 
 
@@ -140,13 +141,14 @@ def save_data_app(index_row, history_days=130, history_dates=24, resolution=10):
     data = save_data(index_row[1], history_days, history_dates, resolution)
     return data
 
-def init_df(df: pd.DataFrame, path: str)->pd.Index:
+def init_df(df: pd.DataFrame, path: str, history_dates: int= 24)->pd.Index:
     list_data = []
     index_count =  pd.Series([NUM_AUGMENT] * df.shape[0], index=df.index)
 
     if os.path.exists(path=path):
         xdf = xr.open_dataset(path, engine='scipy')
         unique, counts = np.unique(xdf['id_obs'].values, return_counts=True)
+        counts = counts / history_dates
         index_count -= pd.Series(counts, index=unique)
         index_count.fillna(NUM_AUGMENT, inplace=True)
         list_data.append(xdf)
@@ -154,7 +156,6 @@ def init_df(df: pd.DataFrame, path: str)->pd.Index:
     index_count = index_count[index_count != 0]
     df = df.loc[index_count.index]
     list_obs = []
-    print(index_count)
     for i in range(len(index_count)):
         list_obs += [df.loc[i]] * int(index_count[i])
 
@@ -169,8 +170,6 @@ def make_data(path, save_folder, augment):
 
     df: pd.DataFrame = pd.read_csv(path)
     df.index.name = 'ts_obs'
-    # df.reset_index(inplace=True)
-    # df.index.name = 'ts_id'
 
     df, list_data = init_df(df, save_file)
 
