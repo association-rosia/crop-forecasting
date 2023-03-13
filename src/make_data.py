@@ -104,7 +104,6 @@ def process_data(xds: xr.Dataset, row: pd.Series, history_dates:int)->xr.Dataset
     xds = xds.swap_dims({'time': 'state_dev'})
     xds = xds.rename_vars(dict_band_name)
     xds['id_obs'] = ('state_dev', [row.name] * xds['state_dev'].shape[0])
-    print(xds)
     xds = xds.expand_dims({'ts_id': 1})
     return xds
 
