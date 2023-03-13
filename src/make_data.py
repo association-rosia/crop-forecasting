@@ -143,7 +143,7 @@ def save_data_app(index_row, history_days=130, history_dates=24, resolution=10):
 
 def get_index_count(df: pd.DataFrame, path: str)->pd.Index:
     list_data = []
-    index_count = df.index.value_counts().sort_index(ascending=True) + NUM_AUGMENT - 1
+    index_count =  pd.Series([NUM_AUGMENT] * df.shape[0], index=df.index)
 
     if os.path.exists(path=path):
         xdf = xr.open_dataset(path, engine='scipy')
@@ -163,17 +163,18 @@ def make_data(path, save_folder, augment):
     # df.index.name = 'ts_id'
 
     index_count, list_data = get_index_count(df, save_file)
+    df = df.loc[index_count.index]
 
     print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
-    try:
-        with mp.Pool(8) as pool:
-            for data in tqdm(pool.imap(save_data_app, zip(index_count, df.iloc.iterrows())), total=index_count.sum()):
-                list_data.append(data)
-    except:
-        "Error occure during the data retrieval."
-    finally:
-        data = xr.concat(list_data, dim='ts_id')
-        data = data.merge(df.to_xarray())
+    # try:
+    with mp.Pool(8) as pool:
+        for data in tqdm(pool.imap(save_data_app, zip(index_count, df.iloc.iterrows())), total=index_count.sum()):
+            list_data.append(data)
+    # except:
+    # "Error occure during the data retrieval."
+    # finally:
+    data = xr.concat(list_data, dim='ts_id')
+    data = data.merge(df.to_xarray())
 
     print(f'\nSave SAR data from {path.split("/")[-1]}...')
     data.to_netcdf(save_file, engine='scipy')
