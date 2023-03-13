@@ -103,8 +103,6 @@ def process_data(xds: xr.Dataset, row: pd.Series, history_dates:int)->xr.Dataset
     xds['state_dev'] =  ('time', np.arange(history_dates)[::-1])
     xds = xds.swap_dims({'time': 'state_dev'})
     xds = xds.rename_vars(dict_band_name)
-    xds['ts_obs'] = ('state_dev', [row['ts_obs']] * xds['state_dev'].shape[0])
-    xds = xds.expand_dims({'ts_id': 1})
     return xds
 
 
@@ -120,48 +118,41 @@ def save_data(row, history_days, history_dates, resolution):
     havest_date = row['Date of Harvest']
     time_period = get_time_period(havest_date, history_days)
     
-    data = get_data(bbox, time_period, bands, scale)
+    xds = get_data(bbox, time_period, bands, scale)
 
-    cloud_mask = ((data.SCL != 0) & 
-                  (data.SCL != 1) & 
-                  (data.SCL != 3) & 
-                  (data.SCL != 6) & 
-                  (data.SCL != 8) & 
-                  (data.SCL != 9) & 
-                  (data.SCL != 10))
+    cloud_mask = ((xds.SCL != 0) & 
+                  (xds.SCL != 1) & 
+                  (xds.SCL != 3) & 
+                  (xds.SCL != 6) & 
+                  (xds.SCL != 8) & 
+                  (xds.SCL != 9) & 
+                  (xds.SCL != 10))
 
-    data = data.where(cloud_mask)
-    data = process_data(data, row, history_dates)
+    xds = xds.where(cloud_mask)
+    xds = process_data(xds, row, history_dates)
     
-    return data
+    return xds
 
 
-def save_data_app(index_row, history_days=130, history_dates=24, resolution=10):
-    data = save_data(index_row[1], history_days, history_dates, resolution)
-    return data
+def save_data_app(index_row, history_days=130, history_dates=24, resolution=10)->xr.Dataset:
+    list_xds = []
+    for i in range(NUM_AUGMENT):
+        xds = save_data(index_row[1], history_days, history_dates, resolution)
+        xds = xds.expand_dims({'ts_aug': [i]})
+        list_xds.append(xds)
+    xds: xr.Dataset = xr.concat(list_xds, dim='ts_aug')
+    xds = xds.expand_dims({'ts_obs': [index_row[0]]})
+    return xds
 
-def init_df(df: pd.DataFrame, path: str, history_dates: int= 24)->pd.Index:
+def init_df(df: pd.DataFrame, path: str)->tuple[pd.DataFrame, list]:
     list_data = []
-    index_count =  pd.Series([NUM_AUGMENT] * df.shape[0], index=df.index)
+    df.index.name = 'ts_obs'
 
     if os.path.exists(path=path):
         xdf = xr.open_dataset(path, engine='scipy')
-        unique, counts = np.unique(xdf['ts_obs'].values, return_counts=True)
-        counts = counts / history_dates
-        index_count -= pd.Series(counts, index=unique)
-        index_count.fillna(NUM_AUGMENT, inplace=True)
+        unique = np.unique(xdf['ts_obs'].values)
         list_data.append(xdf)
-    
-    index_count = index_count[index_count != 0]
-    df.reset_index(inplace=True)
-    df = df.loc[index_count.index]
-    list_obs = []
-    for i in range(len(index_count)):
-        list_obs += [df.loc[i]] * int(index_count[i])
-
-    df = pd.concat(list_obs, axis='columns').T
-    df.reset_index(inplace=True)
-    df.index.name = 'ts_id'
+        df = df.loc[~df.index.isin(unique)]
     
     return df, list_data
 
@@ -169,20 +160,18 @@ def make_data(path, save_folder, augment):
     save_file = f'{save_folder}/{path.split("/")[-1].split(".")[0]}.nc'
 
     df: pd.DataFrame = pd.read_csv(path)
-    df.index.name = 'ts_obs'
-
     df, list_data = init_df(df, save_file)
 
     print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
     try:
         with mp.Pool(8) as pool:
-            for data in tqdm(pool.imap(save_data_app, df.iterrows()), total=len(df)):
-                list_data.append(data)
+            for xds in tqdm(pool.imap(save_data_app, df.iterrows()), total=len(df)):
+                list_data.append(xds)
                 
-        data = xr.concat(list_data, dim='ts_id')
+        data = xr.concat(list_data, dim='ts_obs')
     except:
         "Error occure during the data retrieval."
-        data = xr.concat(list_data, dim='ts_id')
+        data = xr.concat(list_data, dim='ts_obs')
 
     print(f'\nSave SAR data from {path.split("/")[-1]}...')
     data.to_netcdf(save_file, engine='scipy')
