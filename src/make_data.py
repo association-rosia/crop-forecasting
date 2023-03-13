@@ -168,7 +168,7 @@ def make_data(path, save_folder, augment):
     print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
     try:
         with mp.Pool(8) as pool:
-            for data in tqdm(pool.imap(save_data_app, zip(index_count, df.iterrows())), total=index_count.sum()):
+            for data in tqdm(pool.imap(save_data_app, zip(index_count, df.iterrows())), total=index_count.shape[0]):
                 list_data.append(data)
     except:
         "Error occure during the data retrieval."
