@@ -104,7 +104,7 @@ def process_data(xds: xr.Dataset, row: pd.Series, history_dates:int)->xr.Dataset
     xds = xds.swap_dims({'time': 'state_dev'})
     xds = xds.rename_vars(dict_band_name)
     xds = xds.expand_dims({'ts_id': 1, 'id_obs': 1})
-    xds['id_obs'] = row.name
+    xds['id_obs'] = [row.name]
     return xds
 
 
@@ -146,15 +146,17 @@ def init_df(df: pd.DataFrame, path: str)->pd.Index:
 
     if os.path.exists(path=path):
         xdf = xr.open_dataset(path, engine='scipy')
-        unique, counts = np.unique(xdf['ts_obs'].values, return_counts=True)
-        index_count -= pd.Series(counts, index=unique).sort_index(ascending=True)
+        unique, counts = np.unique(xdf['id_obs'].values, return_counts=True)
+        index_count -= pd.Series(counts, index=unique)
+        index_count.fillna(NUM_AUGMENT, inplace=True)
         list_data.append(xdf)
     
     index_count = index_count[index_count != 0]
     df = df.loc[index_count.index]
     list_obs = []
+    print(index_count)
     for i in range(len(index_count)):
-        list_obs += [df.loc[i]] * index_count[i]
+        list_obs += [df.loc[i]] * int(index_count[i])
 
     df = pd.concat(list_obs, axis='columns').T
     df.reset_index(inplace=True)
