@@ -44,12 +44,12 @@ def ha_to_degree(field_size): # Field_size (ha)
 
 def create_folders() -> str:
     if NUM_AUGMENT > 1:
-        save_folder = f'../data/processed/augment_{NUM_AUGMENT}_{MAX_AUGMENT}'
+        save_folder = f'data/processed/augment_{NUM_AUGMENT}_{MAX_AUGMENT}'
     elif SIZE == 'fixed':
         degree = str(round(DEGREE, 5)).replace(".", "-")
-        save_folder = f'../data/processed/fixed_{degree}'
+        save_folder = f'data/processed/fixed_{degree}'
     elif SIZE == 'adaptative':
-        save_folder = f'../data/processed/adaptative_factor_{FACTOR}'
+        save_folder = f'data/processed/adaptative_factor_{FACTOR}'
         
     os.makedirs(save_folder, exist_ok=True)
     return save_folder
@@ -168,7 +168,7 @@ def make_data(path, save_folder, augment):
     print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
     try:
         with mp.Pool(8) as pool:
-            for data in tqdm(pool.imap(save_data_app, zip(index_count, df.iterrows())), total=index_count.shape[0]):
+            for data in tqdm(pool.imap(save_data_app, zip(index_count, df.iterrows())), total=len(index_count)):
                 list_data.append(data)
     except:
         "Error occure during the data retrieval."
