@@ -137,9 +137,10 @@ def save_data(row, history_days, history_dates, resolution):
 
 
 def save_data_app(index_row, history_days=130, history_dates=24, resolution=10):
-    for i in range(index_row[0]):
-        data = save_data(index_row[1][1], history_days, history_dates, resolution)
-    return data
+    list_data = []
+    for _ in range(index_row[0]):
+        list_data.append(save_data(index_row[1][1], history_days, history_dates, resolution))
+    return list_data
 
 def get_index_count(df: pd.DataFrame, path: str)->pd.Index:
     list_data = []
@@ -169,7 +170,7 @@ def make_data(path, save_folder, augment):
     try:
         with mp.Pool(8) as pool:
             for data in tqdm(pool.imap(save_data_app, zip(index_count, df.iterrows())), total=index_count.shape[0]):
-                list_data.append(data)
+                data += data
     except:
         "Error occure during the data retrieval."
     finally:
