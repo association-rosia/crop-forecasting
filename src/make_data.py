@@ -176,11 +176,12 @@ def make_data(path, save_folder, augment):
         with mp.Pool(8) as pool:
             for data in tqdm(pool.imap(save_data_app, df.iterrows()), total=len(df)):
                 list_data.append(data)
+                
+        data = xr.concat(list_data, dim='ts_id')
+        # data = data.merge(df.to_xarray())
     except:
         "Error occure during the data retrieval."
-    finally:
         data = xr.concat(list_data, dim='ts_id')
-        data = data.merge(df.to_xarray())
 
     print(f'\nSave SAR data from {path.split("/")[-1]}...')
     data.to_netcdf(save_file, engine='scipy')
