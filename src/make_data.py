@@ -153,11 +153,12 @@ def init_df(df: pd.DataFrame, path: str)->pd.Index:
     df = df.loc[index_count.index]
     list_obs = []
     for i in range(len(index_count)):
-        list_obs += df.loc[i] * index_count[i]
+        list_obs += [df.loc[i]] * index_count[i]
 
-    df = pd.concat(list_obs, axis='index')
+    df = pd.concat(list_obs, axis='columns').T
     df.reset_index(inplace=True)
     df.index.name = 'ts_id'
+    
     return df, list_data
 
 def make_data(path, save_folder, augment):
