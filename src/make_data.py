@@ -103,8 +103,7 @@ def process_data(xds: xr.Dataset, row: pd.Series, history_dates:int)->xr.Dataset
     xds['state_dev'] =  ('time', np.arange(history_dates)[::-1])
     xds = xds.swap_dims({'time': 'state_dev'})
     xds = xds.rename_vars(dict_band_name)
-    xds = xds.expand_dims({'ts_id': 1, 'ts_obs': 1})
-    xds['ts_obs'] = [row.name]
+    xds = xds.expand_dims({'ts_id': 1})
     return xds
 
 
@@ -137,12 +136,10 @@ def save_data(row, history_days, history_dates, resolution):
 
 
 def save_data_app(index_row, history_days=130, history_dates=24, resolution=10):
-    list_data = []
-    for _ in range(index_row[0]):
-        list_data.append(save_data(index_row[1][1], history_days, history_dates, resolution))
-    return list_data
+    data = save_data(index_row[1], history_days, history_dates, resolution)
+    return data
 
-def get_index_count(df: pd.DataFrame, path: str)->pd.Index:
+def init_df(df: pd.DataFrame, path: str)->pd.Index:
     list_data = []
     index_count =  pd.Series([NUM_AUGMENT] * df.shape[0], index=df.index)
 
@@ -153,7 +150,15 @@ def get_index_count(df: pd.DataFrame, path: str)->pd.Index:
         list_data.append(xdf)
     
     index_count = index_count[index_count != 0]
-    return index_count, list_data
+    df = df.loc[index_count.index]
+    list_obs = []
+    for i in range(len(index_count)):
+        list_obs += df.loc[i] * index_count[i]
+
+    df = pd.concat(list_obs, axis='index')
+    df.reset_index(inplace=True)
+    df.index.name = 'ts_id'
+    return df, list_data
 
 def make_data(path, save_folder, augment):
     save_file = f'{save_folder}/{path.split("/")[-1].split(".")[0]}.nc'
@@ -163,14 +168,13 @@ def make_data(path, save_folder, augment):
     # df.reset_index(inplace=True)
     # df.index.name = 'ts_id'
 
-    index_count, list_data = get_index_count(df, save_file)
-    df = df.loc[index_count.index]
+    df, list_data = init_df(df, save_file)
 
     print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
     try:
         with mp.Pool(8) as pool:
-            for list_dataset in tqdm(pool.imap(save_data_app, zip(index_count, df.iterrows())), total=len(index_count)):
-                list_data += list_dataset
+            for data in tqdm(pool.imap(save_data_app, df.iterrows()), total=len(df)):
+                list_data.append(data)
     except:
         "Error occure during the data retrieval."
     finally:
