@@ -103,7 +103,7 @@ def process_data(xds: xr.Dataset, row: pd.Series, history_dates:int)->xr.Dataset
     xds['state_dev'] =  ('time', np.arange(history_dates)[::-1])
     xds = xds.swap_dims({'time': 'state_dev'})
     xds = xds.rename_vars(dict_band_name)
-    xds['id_obs'] = ('state_dev', [row.name] * xds['state_dev'].shape[0])
+    xds['ts_obs'] = ('state_dev', [row['ts_obs']] * xds['state_dev'].shape[0])
     xds = xds.expand_dims({'ts_id': 1})
     return xds
 
@@ -153,6 +153,7 @@ def init_df(df: pd.DataFrame, path: str, history_dates: int= 24)->pd.Index:
         list_data.append(xdf)
     
     index_count = index_count[index_count != 0]
+    df.reset_index(inplace=True)
     df = df.loc[index_count.index]
     list_obs = []
     for i in range(len(index_count)):
