@@ -137,7 +137,7 @@ def save_data(row, history_days, history_dates, resolution):
 
 
 def save_data_app(index_row, history_days=130, history_dates=24, resolution=10):
-    for i in range(index_row[0][0]):
+    for i in range(index_row[0]):
         data = save_data(index_row[1][1], history_days, history_dates, resolution)
     return data
 
