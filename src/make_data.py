@@ -166,15 +166,15 @@ def make_data(path, save_folder, augment):
     df = df.loc[index_count.index]
 
     print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
-    # try:
-    with mp.Pool(8) as pool:
-        for data in tqdm(pool.imap(save_data_app, zip(index_count, df.iterrows())), total=index_count.sum()):
-            list_data.append(data)
-    # except:
-    # "Error occure during the data retrieval."
-    # finally:
-    data = xr.concat(list_data, dim='ts_id')
-    data = data.merge(df.to_xarray())
+    try:
+        with mp.Pool(8) as pool:
+            for data in tqdm(pool.imap(save_data_app, zip(index_count, df.iterrows())), total=index_count.sum()):
+                list_data.append(data)
+    except:
+        "Error occure during the data retrieval."
+    finally:
+        data = xr.concat(list_data, dim='ts_id')
+        data = data.merge(df.to_xarray())
 
     print(f'\nSave SAR data from {path.split("/")[-1]}...')
     data.to_netcdf(save_file, engine='scipy')
