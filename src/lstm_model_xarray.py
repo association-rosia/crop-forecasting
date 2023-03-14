@@ -31,8 +31,8 @@ def get_loaders(config, num_workers):
     val_rate = config['val_rate']
 
     dataset_path = f'../data/processed/{FOLDER}/train_filter_processed.nc'
-    xdf = xr.open_dataset(dataset_path, engine='scipy')
-    dataset = DLDataset(xdf.copy(deep=True))
+    xdf_train = xr.open_dataset(dataset_path, engine='scipy')
+    dataset = DLDataset(xdf_train)
     
     val_size = int(val_rate * len(dataset))
     train_size = len(dataset) - val_size
@@ -43,12 +43,21 @@ def get_loaders(config, num_workers):
     val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
 
     dataset_path = f'../data/processed/{FOLDER}/test_filter_processed.nc'
-    xdf = xr.open_dataset(dataset_path, engine='scipy')
-    test_dataset = DLDataset(xdf.copy(deep=True))
+    xdf_test = xr.open_dataset(dataset_path, engine='scipy')
+    test_dataset = DLDataset(xdf_test)
     
     test_loader = DataLoader(test_dataset, batch_size=1, num_workers=num_workers)
     
     return train_loader, val_loader, test_loader
+
+def get_criterion(name):
+        if name == 'MSELoss':
+            criterion = nn.MSELoss()
+        elif name == 'L1Loss':
+            criterion = nn.L1Loss()
+        elif name == 'HuberLoss':
+            criterion = nn.HuberLoss()
+        return criterion
 
 def main():
     wandb.init(
@@ -59,7 +68,7 @@ def main():
             'num_layers': 2, # try 1 to 4
             'learning_rate': 1e-3,
             'dropout': 0.1,
-            'epochs': 5000,
+            'epochs': 10,
             'optimizer': 'AdamW', # try AdamW, LBFGS 
             'criterion': 'MSELoss', # try MSELoss, L1Loss, HuberLoss
             'val_rate': 0.2
@@ -77,23 +86,22 @@ def main():
     model = LSTMModel(wandb.config)
     model.to(DEVICE)
     
-    criterion = get_criterion(wandb.config)
+    criterion = get_criterion(wandb.config['criterion'])
     optimizer = torch.optim.AdamW(model.parameters(), lr=wandb.config['learning_rate'])
     scheduler = ReduceLROnPlateau(optimizer, patience=500)
-    
-    train_model(wandb.config, model, optimizer, scheduler, criterion, train_loader, val_loader)
-    make_submission(model, test_loader)
 
-
-def get_criterion(config):
-    if config['criterion'] == 'MSELoss':
-        criterion = nn.MSELoss()
-    elif config['criterion'] == 'L1Loss':
-        criterion = nn.L1Loss()
-    elif config['criterion'] == 'HuberLoss':
-        criterion = nn.HuberLoss()
-        
-    return criterion
+    config = {
+        'model': model,
+        'train_loader': train_loader,
+        'val_loader': val_loader,
+        'optimizer': optimizer,
+        'scheduler': scheduler,
+        'criterion': criterion,
+        'epochs': wandb.config['epochs'],
+    }
+    trainer = Trainer(**config)
+    trainer.train()
+    # make_submission(trainer.model, test_loader)
 
 
 class LSTMModel(nn.Module):
@@ -194,89 +202,98 @@ class LSTMModel(nn.Module):
         
         return output
     
-    
-def train_one_epoch(model, optimizer, criterion, train_loader):
-    train_loss = 0.
-    
-    pbar = tqdm(train_loader, leave=False)
-    for i, data in enumerate(pbar):
-        keys_input = ['s_input', 'm_input', 'g_input']
-        inputs = {key: data[key].to(DEVICE) for key in keys_input}
-        labels = data['labels'].float().to(DEVICE)
+class Trainer():
+    def __init__(self, model, train_loader, val_loader, epochs, criterion, optimizer, scheduler) -> None:
+        self.model = model
+        self.train_loader = train_loader
+        self.val_loader = val_loader
+        self.criterion = criterion
+        self.epochs = epochs
+        self.optimizer = optimizer
+        self.scheduler = scheduler
 
-        # Zero gradients for every batch
-        optimizer.zero_grad()
-
-        # Make predictions for this batch
-        outputs = model(inputs)
+    def train_one_epoch(self):
+        train_loss = 0.
         
-        # Compute the loss and its gradients
-        loss = criterion(outputs, labels)
-        loss.backward()
+        pbar = tqdm(self.train_loader, leave=False)
+        for i, data in enumerate(pbar):
+            keys_input = ['s_input', 'm_input', 'g_input']
+            inputs = {key: data[key].to(DEVICE) for key in keys_input}
+            labels = data['labels'].float().to(DEVICE)
 
-        # Adjust learning weights
-        optimizer.step()
+            # Zero gradients for every batch
+            self.optimizer.zero_grad()
 
-        train_loss += loss.item()
-        pbar.set_description(f'Batch: i/{len(train_loader)} Epoch Loss: {train_loss / i}, Batch Loss: {loss.item()}')
+            # Make predictions for this batch
+            outputs = self.model(inputs)
+            
+            # Compute the loss and its gradients
+            loss = self.criterion(outputs, labels)
+            loss.backward()
+
+            # Adjust learning weights
+            self.optimizer.step()
+
+            train_loss += loss.item()
+            pbar.set_description(f'Batch: i/{len(self.train_loader)} Epoch Loss: {train_loss / i}, Batch Loss: {loss.item()}')
+            
+        train_loss /= len(self.train_loader)
         
-    train_loss /= len(train_loader)
-    
-    return train_loss
+        return train_loss
 
 
-def val_one_epoch(model, criterion, val_loader):
-    val_loss = 0.
-    val_labels = []
-    val_preds = []
-    
-    model.eval()
-
-    pbar = tqdm(val_loader, leave=False)
-    for i, data in enumerate(pbar):
-        keys_input = ['s_input', 'm_input', 'g_input']
-        inputs = {key: data[key].to(DEVICE) for key in keys_input}
-        labels = data['labels'].float().to(DEVICE)
-
-        outputs = model(inputs)
+    def val_one_epoch(self):
+        val_loss = 0.
+        val_labels = []
+        val_preds = []
         
-        loss = criterion(outputs, labels)
-        val_loss += loss.item()
+        self.model.eval()
+
+        pbar = tqdm(self.val_loader, leave=False)
+        for i, data in enumerate(pbar):
+            keys_input = ['s_input', 'm_input', 'g_input']
+            inputs = {key: data[key].to(DEVICE) for key in keys_input}
+            labels = data['labels'].float().to(DEVICE)
+
+            outputs = self.model(inputs)
+            
+            loss = self.criterion(outputs, labels)
+            val_loss += loss.item()
+            
+            val_labels += labels.tolist()
+            val_preds += outputs.tolist()
+
+            pbar.set_description(f'Batch: i/{len(self.val_loader)} Epoch Loss: {val_loss / i}, Batch Loss: {loss.item()}')
+            
+        val_loss /= len(self.val_loader)
+        val_r2_score = r2_score(val_labels, val_preds)
+            
+        return val_loss, val_r2_score
+
+
+    def early_stopping():
+        return True
+
+
+    def train(self):
+        self.epochs
+        train_losses = []
+        val_losses = []
         
-        val_labels += labels.tolist()
-        val_preds += outputs.tolist()
+        self.model.train()
 
-        pbar.set_description(f'Batch: i/{len(val_loader)} Epoch Loss: {val_loss / i}, Batch Loss: {loss.item()}')
-        
-    val_loss /= len(val_loader)
-    val_r2_score = r2_score(val_labels, val_preds)
-        
-    return val_loss, val_r2_score
+        iter_epoch = tqdm(range(self.epochs), leave=False)
+        for epoch in iter_epoch:
+            iter_epoch.set_description(f'--- EPOCH {epoch+1}/{self.epochs} --- ')
+            train_loss = self.train_one_epoch()
+            train_losses.append(train_loss)
 
+            val_loss, val_r2_score = self.val_one_epoch()
+            self.scheduler.step(val_loss)
+            val_losses.append(val_loss)
 
-def early_stopping():
-    return True
-
-
-def train_model(config, model, optimizer, scheduler, criterion, train_loader, val_loader):
-    epochs = config['epochs']
-    train_losses = []
-    val_losses = []
-    
-    model.train()
-
-    iter_epoch = tqdm(range(epochs), leave=False)
-    for epoch in iter_epoch:
-        iter_epoch.set_description(f'--- EPOCH {epoch+1}/{epochs} --- ')
-        train_loss = train_one_epoch(model, optimizer, criterion, train_loader)
-        train_losses.append(train_loss)
-
-        val_loss, val_r2_score = val_one_epoch(model, criterion, val_loader)
-        scheduler.step(val_loss)
-        val_losses.append(val_loss)
-
-        wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'val_r2_score': val_r2_score})
-        iter_epoch.write(f'EPOCH {epoch+1}/{epochs}: Train = {train_loss:.5f} - Val = {val_loss:.5f} - Val R2 = {val_r2_score:.5f}')
+            wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'val_r2_score': val_r2_score})
+            iter_epoch.write(f'EPOCH {epoch+1}/{self.epochs}: Train = {train_loss:.5f} - Val = {val_loss:.5f} - Val R2 = {val_r2_score:.5f}')
 
         
 def round_prediction():
@@ -307,7 +324,7 @@ def make_submission(model, test_loader):
                         (test_df['Date of Harvest'] == date_of_harvest),
                         'Predicted Rice Yield (kg/ha)'] = output.item()
 
-    label_scaler = joblib.load(f'../data/processed/lstm/{FOLDER}/scaler_t.joblib')
+    label_scaler = joblib.load(f'data/processed/{FOLDER}/scaler_t.joblib')
     test_df['Predicted Rice Yield (kg/ha)'] = label_scaler.inverse_transform(test_df[['Predicted Rice Yield (kg/ha)']])
     test_df.to_csv('submission.csv', index=False)
         
