@@ -30,7 +30,7 @@ def get_loaders(config, num_workers):
     batch_size = config['batch_size']
     val_rate = config['val_rate']
 
-    dataset_path = f'../data/processed/{FOLDER}/train_filter_processed.nc'
+    dataset_path = f'data/processed/{FOLDER}/train_processed.nc'
     xdf_train = xr.open_dataset(dataset_path, engine='scipy')
     dataset = DLDataset(xdf_train)
     
@@ -42,7 +42,7 @@ def get_loaders(config, num_workers):
     train_loader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
 
-    dataset_path = f'../data/processed/{FOLDER}/test_filter_processed.nc'
+    dataset_path = f'data/processed/{FOLDER}/test_processed.nc'
     xdf_test = xr.open_dataset(dataset_path, engine='scipy')
     test_dataset = DLDataset(xdf_test)
     
@@ -219,7 +219,7 @@ class Trainer():
         for i, data in enumerate(pbar):
             keys_input = ['s_input', 'm_input', 'g_input']
             inputs = {key: data[key].to(DEVICE) for key in keys_input}
-            labels = data['labels'].float().to(DEVICE)
+            labels = data['target'].float().to(DEVICE)
 
             # Zero gradients for every batch
             self.optimizer.zero_grad()
@@ -253,7 +253,7 @@ class Trainer():
         for i, data in enumerate(pbar):
             keys_input = ['s_input', 'm_input', 'g_input']
             inputs = {key: data[key].to(DEVICE) for key in keys_input}
-            labels = data['labels'].float().to(DEVICE)
+            labels = data['target'].float().to(DEVICE)
 
             outputs = self.model(inputs)
             
@@ -302,7 +302,7 @@ def round_prediction():
 
 def make_submission(model, test_loader):
     print('\nCreate submission.csv')
-    test_path = '../data/raw/test.csv'
+    test_path = 'data/raw/test.csv'
     test_df = pd.read_csv(test_path)
     
     model.eval()

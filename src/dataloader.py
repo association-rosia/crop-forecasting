@@ -8,40 +8,46 @@ import torch
 from torch.utils.data import Dataset
 
 class DLDataset(Dataset):
-    def __init__(self, data: xr.Dataset, test: bool=False, times: int=120):
+    def __init__(self, data: xr.Dataset, test: bool=False, s_times: int=24, m_times: int=120):
         self.data: xr.Dataset = data
         self.test: bool = test
-        self.times: int = times
+        self.m_times: int = m_times
+        self.s_times: int = s_times
 
     def __len__(self):
         return self.data['ts_id'].shape[0]
 
     def __getitem__(self, idx):
-        xdf_id = self.data.isel(ts_id=idx)
+        xdf_id = self.data.where(self.data['ts_id'] == 0, drop=True)
         
-        g_input = torch.tensor(xdf_id[G_COLUMNS].to_array().values.astype('float64'), dtype=torch.float)
+        g_arr = xdf_id[G_COLUMNS].to_array().values
+        g_arr = g_arr.reshape(-1).astype(np.double)
+        g_input = torch.tensor(g_arr)
 
-        s_input = torch.tensor(xdf_id[S_COLUMNS].to_array().values.T.astype('float64'), dtype=torch.float)
+        s_arr = xdf_id[S_COLUMNS].to_array().values
+        s_arr = s_arr.reshape((len(S_COLUMNS), self.s_times)).T.astype(np.double)
+        s_input = torch.tensor(s_arr)
         
-        all_dates = pd.date_range(xdf_id['time'].min().values, xdf_id['time'].max().values, freq='d')
-        all_dates = all_dates[-self.times:]
-        m_input = torch.tensor(xdf_id.sel(datetime=all_dates, name=xdf_id['District'])[M_COLUMNS].to_array().values.T.astype('float64'), dtype=torch.float)
+        all_dates = pd.date_range(xdf_id['time'].min().values, xdf_id['time'].max().values, freq='D')
+        all_dates = all_dates[-self.m_times:]
+        g_arr = xdf_id.sel(datetime=all_dates, name=xdf_id['District'])[M_COLUMNS].to_array().values
+        g_arr = g_arr.reshape((len(M_COLUMNS), self.m_times)).T.astype(np.double)
+        m_input = torch.tensor(g_arr)
         
         if self.test:
-            label = xdf_id['Predicted Rice Yield (kg/ha)'].values
+            target = xdf_id['Predicted Rice Yield (kg/ha)'].values
         else:
-            label = xdf_id['Rice Yield (kg/ha)'].values
+            target = xdf_id['Rice Yield (kg/ha)'].values
+
+        target = target.reshape(-1)
 
 
         item: dict = {
-            'district': xdf_id['District'].values,
-            'latitude': xdf_id['Latitude'].values,
-            'longitude': xdf_id['Longitude'].values, 
-            'date_of_harvest': xdf_id['Date of Harvest'].values,
+            'observation': xdf_id['ts_obs'].values,
             's_input': s_input,
             'm_input': m_input,
             'g_input': g_input,
-            'labels': label
+            'target': target
         }
 
         return item
