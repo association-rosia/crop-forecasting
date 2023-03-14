@@ -18,7 +18,8 @@ from random import uniform, random
 # Make data constants
 SIZE = 'adaptative' # 'fixed'
 FACTOR = 1 # for 'adaptative' 
-AUGMENT = 10
+NUM_AUGMENT = 10
+MAX_AUGMENT = 5
 DEGREE = 0.0014589825157734703 # = ha_to_degree(2.622685) # Field size (ha) mean = 2.622685 (train + test)
 
 dict_band_name = {
@@ -42,22 +43,22 @@ def ha_to_degree(field_size): # Field_size (ha)
 
 
 def create_folders() -> str:
-    if AUGMENT > 1:
-        save_folder = f'../data/processed/augment_{AUGMENT}'
+    if NUM_AUGMENT > 1:
+        save_folder = f'data/processed/augment_{NUM_AUGMENT}_{MAX_AUGMENT}'
     elif SIZE == 'fixed':
         degree = str(round(DEGREE, 5)).replace(".", "-")
-        save_folder = f'../data/processed/fixed_{degree}'
+        save_folder = f'data/processed/fixed_{degree}'
     elif SIZE == 'adaptative':
-        save_folder = f'../data/processed/adaptative_factor_{FACTOR}'
+        save_folder = f'data/processed/adaptative_factor_{FACTOR}'
         
     os.makedirs(save_folder, exist_ok=True)
     return save_folder
 
 
-def get_factors(max_factor=5):
+def get_factors():
     factors = []
     for _ in range(4):
-        factor = uniform(1, max_factor)
+        factor = uniform(1, MAX_AUGMENT)
         if random() < 0.5: factor = 1 / factor
         factors.append(factor)
 
@@ -102,9 +103,6 @@ def process_data(xds: xr.Dataset, row: pd.Series, history_dates:int)->xr.Dataset
     xds['state_dev'] =  ('time', np.arange(history_dates)[::-1])
     xds = xds.swap_dims({'time': 'state_dev'})
     xds = xds.rename_vars(dict_band_name)
-    xds = xds.expand_dims({'ts_id': 1})
-    xds['ts_id'] = [row.name]
-
     return xds
 
 
@@ -120,57 +118,70 @@ def save_data(row, history_days, history_dates, resolution):
     havest_date = row['Date of Harvest']
     time_period = get_time_period(havest_date, history_days)
     
-    data = get_data(bbox, time_period, bands, scale)
+    xds = get_data(bbox, time_period, bands, scale)
 
-    cloud_mask = ((data.SCL != 0) & 
-                  (data.SCL != 1) & 
-                  (data.SCL != 3) & 
-                  (data.SCL != 6) & 
-                  (data.SCL != 8) & 
-                  (data.SCL != 9) & 
-                  (data.SCL != 10))
+    cloud_mask = ((xds.SCL != 0) & 
+                  (xds.SCL != 1) & 
+                  (xds.SCL != 3) & 
+                  (xds.SCL != 6) & 
+                  (xds.SCL != 8) & 
+                  (xds.SCL != 9) & 
+                  (xds.SCL != 10))
 
-    data_filter = data.copy(deep=True).where(cloud_mask)
-    data = process_data(data, row, history_dates)
-    data_filter = process_data(data_filter, row, history_dates)
+    xds = xds.where(cloud_mask)
+    xds = process_data(xds, row, history_dates)
     
-    return data, data_filter
+    return xds
 
 
-def save_data_app(index_row, history_days=130, history_dates=24, resolution=10):
-    data, data_filter = save_data(index_row[1], history_days, history_dates, resolution)
-    return data, data_filter
+def save_data_app(index_row, history_days=130, history_dates=24, resolution=10)->xr.Dataset:
+    list_xds = []
+    for i in range(NUM_AUGMENT):
+        xds = save_data(index_row[1], history_days, history_dates, resolution)
+        xds = xds.expand_dims({'ts_aug': [i]})
+        list_xds.append(xds)
+    xds: xr.Dataset = xr.concat(list_xds, dim='ts_aug')
+    xds = xds.expand_dims({'ts_obs': [index_row[0]]})
+    return xds
+
+def init_df(df: pd.DataFrame, path: str)->tuple[pd.DataFrame, list]:
+    list_data = []
+    df.index.name = 'ts_obs'
+
+    if os.path.exists(path=path):
+        xdf = xr.open_dataset(path, engine='scipy')
+        unique = np.unique(xdf['ts_obs'].values)
+        list_data.append(xdf)
+        df = df.loc[~df.index.isin(unique)]
+    
+    return df, list_data
 
 def make_data(path, save_folder, augment):
-    list_data = []
-    list_data_filter = []
-    df = None
+    save_file = f'{save_folder}/{path.split("/")[-1].split(".")[0]}.nc'
 
-    with mp.Pool(8) as p:
-        df = pd.read_csv(path)
-        df = pd.concat(augment * [df], ignore_index=True)
-        df.index.name = 'ts_id'
-        print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
-        for data, data_filter in tqdm(p.imap(save_data_app, df.iterrows()), total=df.shape[0]):
-            list_data.append(data)
-            list_data_filter.append(data_filter)
-    
-    data = xr.concat(list_data, dim='ts_id')
-    data = data.merge(df.to_xarray())
+    df: pd.DataFrame = pd.read_csv(path)
+    df, list_data = init_df(df, save_file)
 
-    data_filter = xr.concat(list_data_filter, dim='ts_id')
-    data_filter = data_filter.merge(df.to_xarray())
+    print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
+    try:
+        with mp.Pool(8) as pool:
+            for xds in tqdm(pool.imap(save_data_app, df.iterrows()), total=len(df)):
+                list_data.append(xds)
+                
+        data = xr.concat(list_data, dim='ts_obs')
+    except:
+        "Error occure during the data retrieval."
+        data = xr.concat(list_data, dim='ts_obs')
 
     print(f'\nSave SAR data from {path.split("/")[-1]}...')
-    data.to_netcdf(f'{save_folder}/{path.split("/")[-1].split(".")[0]}.nc', engine='scipy')
-    data_filter.to_netcdf(f'{save_folder}/{path.split("/")[-1].split(".")[0]}_filter.nc', engine='scipy')
+    data.to_netcdf(save_file, engine='scipy')
     print(f'\nSAR data from {path.split("/")[-1]} saved!')
 
 if __name__ == '__main__':
     save_folder = create_folders()
 
-    train_path = '../data/raw/train.csv'
-    make_data(train_path, save_folder, augment=AUGMENT)
+    train_path = 'data/raw/train.csv'
+    make_data(train_path, save_folder, augment=NUM_AUGMENT)
 
-    test_path = '../data/raw/test.csv'
+    test_path = 'data/raw/test.csv'
     make_data(test_path, save_folder, augment=1)

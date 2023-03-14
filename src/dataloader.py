@@ -1,5 +1,6 @@
-from constants import FOLDER, S_COLUMNS, M_COLUMNS, G_COLUMNS
+from constants import S_COLUMNS, M_COLUMNS, G_COLUMNS
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 
@@ -9,8 +10,8 @@ from torch.utils.data import Dataset
 class DLDataset(Dataset):
     def __init__(self, data: xr.Dataset, test: bool=False, times: int=120):
         self.data: xr.Dataset = data
-        self.test = test
-        self.times = times
+        self.test: bool = test
+        self.times: int = times
 
     def __len__(self):
         return self.data['ts_id'].shape[0]
@@ -20,21 +21,22 @@ class DLDataset(Dataset):
         
         g_input = torch.tensor(xdf_id[G_COLUMNS].to_array().values.astype('float64'), dtype=torch.float)
 
-        s_input = torch.tensor(xdf_id[S_COLUMNS].to_array().values.T, dtype=torch.float)
+        s_input = torch.tensor(xdf_id[S_COLUMNS].to_array().values.T.astype('float64'), dtype=torch.float)
         
         all_dates = pd.date_range(xdf_id['time'].min().values, xdf_id['time'].max().values, freq='d')
         all_dates = all_dates[-self.times:]
-        m_input = torch.tensor(xdf_id.sel(datetime=all_dates, name=xdf_id['District'])[M_COLUMNS].to_array().values.T, dtype=torch.float)
+        m_input = torch.tensor(xdf_id.sel(datetime=all_dates, name=xdf_id['District'])[M_COLUMNS].to_array().values.T.astype('float64'), dtype=torch.float)
         
         if self.test:
             label = xdf_id['Predicted Rice Yield (kg/ha)'].values
         else:
             label = xdf_id['Rice Yield (kg/ha)'].values
-        
-        item = {
-            'district': xdf_id['District'].values, 
-            'latitude': xdf_id['latitude'].values, 
-            'longitude': xdf_id['longitude'].values, 
+
+
+        item: dict = {
+            'district': xdf_id['District'].values,
+            'latitude': xdf_id['Latitude'].values,
+            'longitude': xdf_id['Longitude'].values, 
             'date_of_harvest': xdf_id['Date of Harvest'].values,
             's_input': s_input,
             'm_input': m_input,
