@@ -11,6 +11,8 @@ from scipy.signal import savgol_filter
 
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
+from constants import FOLDER
+
 BANDS = ['red', 'green', 'blue', 'rededge1', 'rededge2', 'rededge3', 'nir', 'swir']
 VI = ['ndvi', 'savi', 'evi', 'rep','osavi','rdvi','mtvi1','lswi']
 M_COLUMNS = ['tempmax', 'tempmin', 'temp', 'dew', 'humidity', 'precip', 'precipprob', 'precipcover', 'windspeed', 'winddir', 
@@ -83,7 +85,7 @@ def compute_vi(xdf: xr.Dataset)->xr.Dataset:
 
 def statedev_fill(xdf: xr.Dataset)->xr.Dataset:
     # compute mean of all stage of developpement of rice field
-    xdf_mean = xdf.mean('ts_id', skipna=True)
+    xdf_mean = xdf.mean(dim='ts_id', skipna=True)
     # fill na value with computed mean
     xdf = xdf.fillna(xdf_mean)
     return xdf
@@ -199,9 +201,9 @@ def process_data(path: str, test: bool=False):
 if __name__ == '__main__':
 
     # Cloud filtered data
-    train_filter_path = '../data/processed/augment_10_5/train_filter.nc'
+    train_filter_path = f'../data/processed/{FOLDER}/train_filter.nc'
     process_data(train_filter_path)
-    test_filter_path = '../data/processed/augment_10_5/test_filter.nc'
+    test_filter_path = f'../data/processed/{FOLDER}/test_filter.nc'
     process_data(test_filter_path, test=True)
 
     # train_path = '../data/processed/adaptative_factor_1/train.nc'
