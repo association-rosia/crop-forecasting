@@ -15,23 +15,24 @@ class DLDataset(Dataset):
         self.s_times: int = s_times
 
     def __len__(self):
-        return self.data['ts_id'].shape[0]
+        shape = self.data['ts_id'].shape
+        return shape[0] * shape[1]
 
     def __getitem__(self, idx):
-        xdf_id = self.data.where(self.data['ts_id'] == 0, drop=True)
+        xdf_id = self.data.where(self.data['ts_id'] == idx, drop=True)
         
         g_arr = xdf_id[G_COLUMNS].to_array().values
-        g_arr = g_arr.reshape(-1).astype(np.double)
+        g_arr = g_arr.reshape(-1).astype(np.float32)
         g_input = torch.tensor(g_arr)
 
         s_arr = xdf_id[S_COLUMNS].to_array().values
-        s_arr = s_arr.reshape((len(S_COLUMNS), self.s_times)).T.astype(np.double)
+        s_arr = s_arr.reshape((len(S_COLUMNS), self.s_times)).T.astype(np.float32)
         s_input = torch.tensor(s_arr)
         
         all_dates = pd.date_range(xdf_id['time'].min().values, xdf_id['time'].max().values, freq='D')
         all_dates = all_dates[-self.m_times:]
         g_arr = xdf_id.sel(datetime=all_dates, name=xdf_id['District'])[M_COLUMNS].to_array().values
-        g_arr = g_arr.reshape((len(M_COLUMNS), self.m_times)).T.astype(np.double)
+        g_arr = g_arr.reshape((len(M_COLUMNS), self.m_times)).T.astype(np.float32)
         m_input = torch.tensor(g_arr)
         
         if self.test:

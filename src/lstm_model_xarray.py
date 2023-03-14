@@ -41,7 +41,7 @@ def get_loaders(config, num_workers):
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size], generator=generator)
     train_loader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
-
+    
     dataset_path = f'data/processed/{FOLDER}/test_processed.nc'
     xdf_test = xr.open_dataset(dataset_path, engine='scipy')
     test_dataset = DLDataset(xdf_test)
@@ -235,7 +235,8 @@ class Trainer():
             self.optimizer.step()
 
             train_loss += loss.item()
-            pbar.set_description(f'Batch: i/{len(self.train_loader)} Epoch Loss: {train_loss / i}, Batch Loss: {loss.item()}')
+            
+            pbar.set_description(f'Batch: {i}/{len(self.train_loader)} Epoch Loss: {train_loss / (i + 1)}, Batch Loss: {loss.item()}')
             
         train_loss /= len(self.train_loader)
         
@@ -263,7 +264,7 @@ class Trainer():
             val_labels += labels.tolist()
             val_preds += outputs.tolist()
 
-            pbar.set_description(f'Batch: i/{len(self.val_loader)} Epoch Loss: {val_loss / i}, Batch Loss: {loss.item()}')
+            pbar.set_description(f'Batch: {i}/{len(self.val_loader)} Epoch Loss: {val_loss / (i + 1)}, Batch Loss: {loss.item()}')
             
         val_loss /= len(self.val_loader)
         val_r2_score = r2_score(val_labels, val_preds)
@@ -293,7 +294,7 @@ class Trainer():
             val_losses.append(val_loss)
 
             wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'val_r2_score': val_r2_score})
-            iter_epoch.write(f'EPOCH {epoch+1}/{self.epochs}: Train = {train_loss:.5f} - Val = {val_loss:.5f} - Val R2 = {val_r2_score:.5f}')
+            iter_epoch.write(f'EPOCH {epoch + 1}/{self.epochs}: Train = {train_loss:.5f} - Val = {val_loss:.5f} - Val R2 = {val_r2_score:.5f}')
 
         
 def round_prediction():
