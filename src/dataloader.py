@@ -19,7 +19,8 @@ class DLDataset(Dataset):
         return shape[0] * shape[1]
 
     def __getitem__(self, idx):
-        xdf_id = self.data.where(self.data['ts_id'] == idx, drop=True)
+        idxes = self.data.ts_id.values.flatten().tolist()
+        xdf_id = self.data.where(self.data['ts_id'] == idxes[idx], drop=True)
         
         g_arr = xdf_id[G_COLUMNS].to_array().values
         g_arr = g_arr.reshape(-1).astype(np.float32)

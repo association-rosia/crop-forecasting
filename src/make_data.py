@@ -18,7 +18,7 @@ from random import uniform, random
 # Make data constants
 SIZE = 'adaptative' # 'fixed'
 FACTOR = 1 # for 'adaptative' 
-NUM_AUGMENT = 10
+NUM_AUGMENT = 50
 MAX_AUGMENT = 5
 DEGREE = 0.0014589825157734703 # = ha_to_degree(2.622685) # Field size (ha) mean = 2.622685 (train + test)
 
@@ -169,8 +169,8 @@ def make_data(path, save_folder, augment):
                 list_data.append(xds)
                 
         data = xr.concat(list_data, dim='ts_obs')
-    except:
-        "Error occure during the data retrieval."
+    except Exception as e:
+        print(e)
         data = xr.concat(list_data, dim='ts_obs')
 
     print(f'\nSave SAR data from {path.split("/")[-1]}...')
