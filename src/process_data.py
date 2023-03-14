@@ -126,7 +126,7 @@ def features_modification(xdf: xr.Dataset, test: bool)->xr.Dataset:
     xdf['datetime'] = xdf['datetime'].astype(np.datetime64)
     xdf = xdf.reset_coords('time')
 
-    columns = S_COLUMNS + G_COLUMNS + M_COLUMNS
+    columns = S_COLUMNS + G_COLUMNS + M_COLUMNS + ['time'] # time is the key to link with weather data 
     if not test:
         columns.append(TARGET)
     xdf = xdf[columns]
