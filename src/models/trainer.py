@@ -1,10 +1,19 @@
+import torch 
 from tqdm import tqdm
 from sklearn.metrics import r2_score
 import pandas as pd
+from datetime import datetime
+from os.path import join
 import wandb
 
+import os, sys
+parent = os.path.abspath('.')
+sys.path.insert(1, parent)
+
+from utils import ROOT_DIR
+
 class Trainer():
-    def __init__(self, model, train_loader, val_loader, epochs, criterion, optimizer, scheduler, device) -> None:
+    def __init__(self, model, train_loader, val_loader, epochs, criterion, optimizer, scheduler, device):
         self.model = model
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -12,7 +21,9 @@ class Trainer():
         self.epochs = epochs
         self.optimizer = optimizer
         self.scheduler = scheduler
-        self.device = device
+        self.device = device        
+        self.timestamp = int(datetime.now().timestamp())
+        self.best_score = 0
 
     def train_one_epoch(self):
         train_loss = 0.
@@ -91,7 +102,25 @@ class Trainer():
 
     def early_stopping(self):
         return True
-
+    
+    def save(self, score):
+        save_folder = join(ROOT_DIR, 'models') 
+        
+        if score > self.best_score:
+            self.best_score = score
+            os.makedirs(save_folder, exist_ok=True)
+            
+            # delete former best model 
+            former_model = [f for f in os.listdir(save_folder) if f.split('_')[0] == str(self.timestamp)]
+            if len(former_model) == 1:
+                os.remove(join(save_folder, former_model[0]))
+            
+            # save new model 
+            score = str(score)[:7].replace('.', '-')
+            file_name = f'{self.timestamp}_model_{score}.pt'
+            save_path = join(save_folder, file_name)
+            torch.save(self.model, save_path)
+        
     def train(self): # train model 
         train_losses = []
         val_losses = []
@@ -105,6 +134,8 @@ class Trainer():
             val_loss, val_r2_score, val_mean_r2_score = self.val_one_epoch()
             self.scheduler.step(val_loss)
             val_losses.append(val_loss)
+            
+            self.save(val_mean_r2_score)
 
             wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'val_r2_score': val_r2_score, 'val_mean_r2_score': val_mean_r2_score})
             iter_epoch.write(f'EPOCH {epoch + 1}/{self.epochs}: Train = {train_loss:.5f} - Val = {val_loss:.5f} - Val R2 = {val_r2_score:.5f} - Val mean R2 = {val_mean_r2_score:.5f}')
