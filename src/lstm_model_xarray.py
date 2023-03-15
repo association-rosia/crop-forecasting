@@ -45,6 +45,8 @@ def main():
     train_loader, val_loader, test_loader = get_loaders(wandb.config, num_workers=4)
     first_batch = train_loader.dataset[0]
     
+    wandb.config['train_size'] = len(train_loader.dataset)
+    wandb.config['val_size'] = len(val_loader.dataset)
     wandb.config['s_num_features'] = first_batch['s_input'].shape[1]
     wandb.config['m_num_features'] = first_batch['m_input'].shape[1]
     wandb.config['g_in_features'] = first_batch['g_input'].shape[0]
