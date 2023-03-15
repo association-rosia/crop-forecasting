@@ -1,5 +1,7 @@
 from tqdm import tqdm
 from sklearn.metrics import r2_score
+import pandas as pd
+import wandb
 
 class Trainer():
     def __init__(self, model, train_loader, val_loader, epochs, criterion, optimizer, scheduler, device) -> None:
@@ -44,9 +46,21 @@ class Trainer():
         train_loss /= len(self.train_loader)
         
         return train_loss
+    
+    def compute_r2_scores(self, observations, labels, preds):
+        df = pd.DataFrame()
+        df['observations'] = observations
+        df['labels'] = labels
+        df['preds'] = preds
+        full_r2_score = r2_score(df.labels, df.preds)    
+        df = df.groupby(['observations']).mean()
+        mean_r2_score = r2_score(df.labels, df.preds)
+
+        return full_r2_score, mean_r2_score
 
     def val_one_epoch(self):
         val_loss = 0.
+        observations = []
         val_labels = []
         val_preds = []
         
@@ -64,15 +78,16 @@ class Trainer():
             val_loss += loss.item()
             epoch_loss = val_loss / (i + 1)
             
-            val_labels += labels.tolist()
-            val_preds += outputs.tolist()
+            observations += data['observation'].squeeze().tolist()
+            val_labels += labels.squeeze().tolist()
+            val_preds += outputs.squeeze().tolist()
                 
             pbar.set_description(f'Batch: {i + 1}/{len(self.val_loader)} Epoch Loss: {epoch_loss:.5f}, Batch Loss: {loss.item():.5f}')
             
         val_loss /= len(self.val_loader)
-        val_r2_score = r2_score(val_labels, val_preds)
+        val_r2_score, val_mean_r2_score = self.compute_r2_scores(observations, val_labels, val_preds)
             
-        return val_loss, val_r2_score
+        return val_loss, val_r2_score, val_mean_r2_score
 
     def early_stopping(self):
         return True
@@ -87,9 +102,9 @@ class Trainer():
             train_loss = self.train_one_epoch()
             train_losses.append(train_loss)
 
-            val_loss, val_r2_score = self.val_one_epoch()
+            val_loss, val_r2_score, val_mean_r2_score = self.val_one_epoch()
             self.scheduler.step(val_loss)
             val_losses.append(val_loss)
 
-            wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'val_r2_score': val_r2_score})
-            iter_epoch.write(f'EPOCH {epoch + 1}/{self.epochs}: Train = {train_loss:.5f} - Val = {val_loss:.5f} - Val R2 = {val_r2_score:.5f}')
+            wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'val_r2_score': val_r2_score, 'val_mean_r2_score': val_mean_r2_score})
+            iter_epoch.write(f'EPOCH {epoch + 1}/{self.epochs}: Train = {train_loss:.5f} - Val = {val_loss:.5f} - Val R2 = {val_r2_score:.5f} - Val mean R2 = {val_mean_r2_score:.5f}')

@@ -4,7 +4,11 @@ import joblib
 import warnings
 warnings.filterwarnings('ignore')
 
-from constants import FOLDER, S_COLUMNS, M_COLUMNS, G_COLUMNS
+import os, sys
+parent = os.path.abspath('.')
+sys.path.insert(1, parent)
+
+from src.constants import FOLDER, S_COLUMNS, M_COLUMNS, G_COLUMNS
 
 import numpy as np
 import pandas as pd
