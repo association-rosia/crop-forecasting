@@ -1,5 +1,6 @@
 import os
 import math
+import time
 from tqdm import tqdm
 from datetime import datetime, timedelta
 
@@ -169,6 +170,8 @@ def init_df(df: pd.DataFrame, path: str) -> tuple[pd.DataFrame, list]:
 
 
 def make_data(path, save_folder):
+    finish = True
+    start = time.time()
     save_file = f'{save_folder}/{path.split("/")[-1].split(".")[0]}.nc'
 
     df: pd.DataFrame = pd.read_csv(path)
@@ -179,15 +182,19 @@ def make_data(path, save_folder):
         with mp.Pool(4) as pool:
             for xds in tqdm(pool.imap(save_data_app, df.iterrows()), total=len(df)):
                 list_data.append(xds)
-                
-        data = xr.concat(list_data, dim='ts_obs')
+                if time.time() - start == 1800:
+                    finish = False
+                    raise Exception('Checkpoint.')
     except:
         "Error occurs during the data retrieval..."
-        data = xr.concat(list_data, dim='ts_obs')
-
+    
+    data = xr.concat(list_data, dim='ts_obs')
     print(f'\nSave SAR data from {path.split("/")[-1]}...')
     data.to_netcdf(save_file, engine='scipy')
     print(f'\nSAR data from {path.split("/")[-1]} saved!')
+    
+    if not finish:
+        make_data(path, save_folder)
     
 
 if __name__ == '__main__':
