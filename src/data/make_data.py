@@ -170,7 +170,7 @@ def init_df(df: pd.DataFrame, path: str) -> tuple[pd.DataFrame, list]:
 
 
 def make_data(path, save_folder):
-    finish = True
+    checkpoint = False
     start = time.time()
     save_file = f'{save_folder}/{path.split("/")[-1].split(".")[0]}.nc'
 
@@ -183,7 +183,7 @@ def make_data(path, save_folder):
             for xds in tqdm(pool.imap(save_data_app, df.iterrows()), total=len(df)):
                 list_data.append(xds)
                 if time.time() - start == 1800:
-                    finish = False
+                    checkpoint = True
                     raise Exception('Checkpoint.')
     except:
         "Error occurs during the data retrieval..."
@@ -193,7 +193,7 @@ def make_data(path, save_folder):
     data.to_netcdf(save_file, engine='scipy')
     print(f'\nSAR data from {path.split("/")[-1]} saved!')
     
-    if not finish:
+    if checkpoint:
         make_data(path, save_folder)
     
 
