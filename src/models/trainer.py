@@ -41,7 +41,7 @@ class Trainer():
             train_loss += loss.item()
             epoch_loss = train_loss / (i + 1)
             
-            pbar.set_description(f'Batch: {i + 1}/{len(self.train_loader)} Epoch Loss: {epoch_loss:.5f}, Batch Loss: {loss.item():.5f}')
+            pbar.set_description(f'TRAIN - Batch: {i + 1}/{len(self.train_loader)} Epoch Loss: {epoch_loss:.5f} - Batch Loss: {loss.item():.5f}')
             
         train_loss /= len(self.train_loader)
         
@@ -82,7 +82,7 @@ class Trainer():
             val_labels += labels.squeeze().tolist()
             val_preds += outputs.squeeze().tolist()
                 
-            pbar.set_description(f'Batch: {i + 1}/{len(self.val_loader)} Epoch Loss: {epoch_loss:.5f}, Batch Loss: {loss.item():.5f}')
+            pbar.set_description(f'VAL - Batch: {i + 1}/{len(self.val_loader)} Epoch Loss: {epoch_loss:.5f} - Batch Loss: {loss.item():.5f}')
             
         val_loss /= len(self.val_loader)
         val_r2_score, val_mean_r2_score = self.compute_r2_scores(observations, val_labels, val_preds)
