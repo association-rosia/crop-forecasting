@@ -13,6 +13,10 @@ from datascaler import DatasetScaler
 
 from constants import FOLDER, S_COLUMNS, G_COLUMNS, M_COLUMNS, TARGET
 
+import os, sys
+parent = os.path.abspath('.')
+sys.path.insert(1, parent)
+
 from utils import ROOT_DIR
 from os.path import join
 

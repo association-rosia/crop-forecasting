@@ -14,6 +14,10 @@ from odc.stac import stac_load
 import multiprocessing as mp
 from random import uniform, random
 
+import os, sys
+parent = os.path.abspath('.')
+sys.path.insert(1, parent)
+
 from utils import ROOT_DIR
 from os.path import join
 
@@ -83,6 +87,7 @@ def get_bbox(longitude, latitude, field_size):
     
     return (min_longitude, min_latitude, max_longitude, max_latitude)
 
+
 def get_time_period(havest_date: str, history_days: int)->str:
     havest_datetime = datetime.strptime(havest_date, '%d-%m-%Y')
     sowing_datetime = havest_datetime - timedelta(days=history_days)
@@ -137,17 +142,20 @@ def save_data(row, history_days, history_dates, resolution):
     return xds
 
 
-def save_data_app(index_row, history_days=130, history_dates=24, resolution=10)->xr.Dataset:
+def save_data_app(index_row, history_days=130, history_dates=24, resolution=10) -> xr.Dataset:
     list_xds = []
+    
     for i in range(NUM_AUGMENT):
         xds = save_data(index_row[1], history_days, history_dates, resolution)
         xds = xds.expand_dims({'ts_aug': [i]})
         list_xds.append(xds)
     xds: xr.Dataset = xr.concat(list_xds, dim='ts_aug')
     xds = xds.expand_dims({'ts_obs': [index_row[0]]})
+    
     return xds
 
-def init_df(df: pd.DataFrame, path: str)->tuple[pd.DataFrame, list]:
+
+def init_df(df: pd.DataFrame, path: str) -> tuple[pd.DataFrame, list]:
     list_data = []
     df.index.name = 'ts_obs'
 
@@ -159,7 +167,8 @@ def init_df(df: pd.DataFrame, path: str)->tuple[pd.DataFrame, list]:
     
     return df, list_data
 
-def make_data(path, save_folder, augment):
+
+def make_data(path, save_folder):
     save_file = f'{save_folder}/{path.split("/")[-1].split(".")[0]}.nc'
 
     df: pd.DataFrame = pd.read_csv(path)
@@ -167,24 +176,25 @@ def make_data(path, save_folder, augment):
 
     print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
     try:
-        with mp.Pool(8) as pool:
+        with mp.Pool(4) as pool:
             for xds in tqdm(pool.imap(save_data_app, df.iterrows()), total=len(df)):
                 list_data.append(xds)
                 
         data = xr.concat(list_data, dim='ts_obs')
-    except Exception as e:
-        print(e)
+    except:
+        "Error occurs during the data retrieval..."
         data = xr.concat(list_data, dim='ts_obs')
 
     print(f'\nSave SAR data from {path.split("/")[-1]}...')
     data.to_netcdf(save_file, engine='scipy')
     print(f'\nSAR data from {path.split("/")[-1]} saved!')
+    
 
 if __name__ == '__main__':
     save_folder = create_folders()
 
     train_path = join(ROOT_DIR, 'data', 'raw', 'train.csv')
-    make_data(train_path, save_folder, augment=NUM_AUGMENT)
+    make_data(train_path, save_folder)
 
     test_path = join(ROOT_DIR, 'data', 'raw', 'test.csv')
-    make_data(test_path, save_folder, augment=NUM_AUGMENT)
+    make_data(test_path, save_folder)

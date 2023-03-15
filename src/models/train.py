@@ -15,18 +15,11 @@ import matplotlib.pyplot as plt
 import torch
 
 import torch.nn as nn
-from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from dataloader import DLDataset, get_loaders
 from model import LSTMModel
 from trainer import Trainer
-
-from sklearn.metrics import r2_score
-from sklearn.model_selection import train_test_split
 import wandb
-
-
-
 
 
 def main():

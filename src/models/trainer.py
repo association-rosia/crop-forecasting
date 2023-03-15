@@ -1,4 +1,5 @@
-
+from tqdm import tqdm
+from sklearn.metrics import r2_score
 
 class Trainer():
     def __init__(self, model, train_loader, val_loader, epochs, criterion, optimizer, scheduler, device) -> None:
