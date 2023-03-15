@@ -55,7 +55,7 @@ def main():
     model = LSTMModel(wandb.config)
     model.to(DEVICE)
     
-    criterion = get_criterion()
+    criterion = nn.MSELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=wandb.config['learning_rate'])
     scheduler = ReduceLROnPlateau(optimizer, patience=10)
 
@@ -196,7 +196,7 @@ class Trainer():
             train_loss += loss.item()
             epoch_loss = train_loss / (i + 1)
             
-            pbar.set_description(f'Batch: {i}/{len(self.train_loader)} Epoch Loss: {epoch_loss:.5f}, Batch Loss: {loss.item():.5f}')
+            pbar.set_description(f'Batch: {i + 1}/{len(self.train_loader)} Epoch Loss: {epoch_loss:.5f}, Batch Loss: {loss.item():.5f}')
             
         train_loss /= len(self.train_loader)
         
@@ -225,7 +225,7 @@ class Trainer():
             val_labels += labels.tolist()
             val_preds += outputs.tolist()
                 
-            pbar.set_description(f'Batch: {i}/{len(self.val_loader):.5f} Epoch Loss: {epoch_loss:.5f}, Batch Loss: {loss.item():.5f}')
+            pbar.set_description(f'Batch: {i + 1}/{len(self.val_loader)} Epoch Loss: {epoch_loss:.5f}, Batch Loss: {loss.item():.5f}')
             
         val_loss /= len(self.val_loader)
         val_r2_score = r2_score(val_labels, val_preds)
@@ -261,11 +261,15 @@ def get_loaders(config, num_workers):
     xdf_train = xr.open_dataset(dataset_path, engine='scipy')
     train_idx, val_idx = train_test_split(xdf_train.ts_obs, test_size=val_rate, random_state=42)
 
-    train_array = xdf_train.where(xdf_train['ts_obs'].isin(train_idx), drop=True)
+    train_array = xdf_train.sel(ts_obs=train_idx)
+    train_shape = train_array['ts_id'].shape
+    train_array['ts_id'].values = np.arange(np.prod(train_shape)).reshape(train_shape)
     train_dataset = DLDataset(train_array)
     train_loader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers)
     
-    val_array = xdf_train.where(xdf_train['ts_obs'].isin(val_idx), drop=True)
+    val_array = xdf_train.sel(ts_obs=val_idx)
+    val_shape = val_array['ts_id'].shape
+    val_array['ts_id'].values = np.arange(np.prod(val_shape)).reshape(val_shape)
     val_dataset = DLDataset(val_array)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
     
@@ -275,11 +279,6 @@ def get_loaders(config, num_workers):
     test_loader = DataLoader(test_dataset, batch_size=1, num_workers=num_workers)
     
     return train_loader, val_loader, test_loader
-
-
-def get_criterion():
-    criterion = nn.MSELoss()
-    return criterion
 
         
 def round_prediction():
