@@ -3,5 +3,6 @@
 **/.ipynb_checkpoints
 **/__pycache__
 **/model
-assets
-wandb
+**/assets
+**/wandb
+**/saved
