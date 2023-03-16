@@ -4,7 +4,11 @@ import xarray as xr
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
-from constants import S_COLUMNS, G_COLUMNS, M_COLUMNS, TARGET
+import os, sys
+parent = os.path.abspath('.')
+sys.path.insert(1, parent)
+
+from src.constants import FOLDER, S_COLUMNS, G_COLUMNS, M_COLUMNS, TARGET
 
 class DatasetScaler:
     def __init__(self) -> None:

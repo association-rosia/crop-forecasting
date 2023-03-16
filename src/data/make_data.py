@@ -182,7 +182,7 @@ def make_data(path, save_folder):
         with mp.Pool(4) as pool:
             for xds in tqdm(pool.imap(save_data_app, df.iterrows()), total=len(df)):
                 list_data.append(xds)
-                if time.time() - start == 1800:
+                if time.time() - start > 3600:
                     checkpoint = True
                     raise Exception('Checkpoint.')
     except:
