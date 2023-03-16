@@ -45,7 +45,7 @@ def ha_to_degree(field_size): # Field_size (ha)
     then, side_size = sqrt(0.01 * field_size) (km)
     so, degree = side_size / 111 (°)
     '''
-    side_size = math.sqrt(0.01 * field_size) 
+    side_size = math.sqrt(0.01 * field_size)
     degree = side_size / 111
     return degree
 
@@ -182,6 +182,7 @@ def make_data(path, save_folder):
         with mp.Pool(4) as pool:
             for xds in tqdm(pool.imap(save_data_app, df.iterrows()), total=len(df)):
                 list_data.append(xds)
+                
                 if time.time() - start > 3600:
                     checkpoint = True
                     raise Exception('Checkpoint.')

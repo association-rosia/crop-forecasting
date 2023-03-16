@@ -52,7 +52,6 @@ class DLDataset(Dataset):
 
         target = target.reshape(-1)
 
-
         item: dict = {
             'observation': xdf_id['ts_obs'].values,
             's_input': s_input,
@@ -87,6 +86,6 @@ def get_loaders(config, num_workers):
     dataset_path = join(ROOT_DIR, 'data', 'processed', FOLDER, 'test_processed.nc')
     xdf_test = xr.open_dataset(dataset_path, engine='scipy')
     test_dataset = DLDataset(xdf_test)
-    test_loader = DataLoader(test_dataset, batch_size=1, num_workers=num_workers)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, num_workers=num_workers)
     
     return train_loader, val_loader, test_loader
