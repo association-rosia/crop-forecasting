@@ -10,10 +10,13 @@ import xarray as xr
 from scipy.signal import savgol_filter
 
 from datascaler import DatasetScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 import os, sys
 parent = os.path.abspath('.')
 sys.path.insert(1, parent)
+
+from tqdm import tqdm
 
 from src.constants import FOLDER, S_COLUMNS, G_COLUMNS, M_COLUMNS, TARGET
 
@@ -37,7 +40,7 @@ def add_weather(xdf: xr.Dataset) -> xr.Dataset:
     xdf = xdf
 
     weather = []
-    for path in glob.glob('data/raw/weather/*.csv'):
+    for path in glob.glob(join(ROOT_DIR, 'data', 'raw', 'weather', '*.csv')):
         weather.append(pd.read_csv(path))
 
     df_weather = pd.concat(weather, axis='index')
@@ -130,7 +133,7 @@ def features_modification(xdf: xr.Dataset, test: bool) -> xr.Dataset:
     xdf['sunset'] = xdf['sunset'].astype(np.datetime64)
 
     xdf['solarexposure'] = (xdf['sunset'] - xdf['sunrise']).dt.seconds
-
+    
     xdf['time'] = xdf['time'].astype(np.datetime64)
     xdf['datetime'] = xdf['datetime'].astype(np.datetime64)
     xdf = xdf.reset_coords('time')
@@ -149,8 +152,16 @@ def scale_data(xdf: xr.Dataset, path: str, test: bool) -> xr.Dataset:
     path = '/'.join(path.split('/')[:-1]) + "/scaler_dataset.joblib"
     
     if not test:
-        scaler = DatasetScaler()
-        xdf = scaler.fit_transform(xdf)
+        scaler = DatasetScaler(
+            scaler_s = StandardScaler(),
+            columns_s= S_COLUMNS,
+            scaler_g = StandardScaler(),
+            columns_g= G_COLUMNS,
+            scaler_m = StandardScaler(),
+            columns_m= M_COLUMNS,
+            scaler_t = MinMaxScaler(),
+        )
+        xdf = scaler.fit_transform(xdf, TARGET)
         joblib.dump(scaler, path)
     else:
         scaler: DatasetScaler = joblib.load(path)
@@ -166,27 +177,78 @@ def create_id(xdf: xr.Dataset) -> xr.Dataset:
     return xdf
 
 
+def create_pb(nb_action: int, test: str):
+    progress_bar = tqdm(range(nb_action), leave=False)
+    if test:
+        msg = 'Test Dataset - '
+    else:
+        msg = 'Train Dataset - '
+    return progress_bar, msg
+
 def process_data(path: str, test: bool=False):
+    pb, msg = create_pb(10, test)
+
+    pb.set_description(msg + 'Read Data')
     xdf = xr.open_dataset(path)
+
     # Add observation to the dataset
+    pb.update(0)
+    pb.refresh()
+    pb.set_description(msg + 'Add Observation')
     xdf = add_observation(xdf, test)
+
     # Add weather to the dataset
+    pb.update(1)
+    pb.refresh()
+    pb.set_description(msg + 'Add Weather Data')
     xdf = add_weather(xdf)
+
     # Compute vegetable indice
+    pb.update(2)
+    pb.refresh()
+    pb.set_description(msg + 'Compute VI')
     xdf = compute_vi(xdf)
+
     # Fill na values
+    pb.update(3)
+    pb.refresh()
+    pb.set_description(msg + 'Fill null value')
     xdf = statedev_fill(xdf)
+
     # Smooth variable
+    pb.update(4)
+    pb.refresh()
+    pb.set_description(msg + 'Smooth VI')
     xdf = smooth(xdf)
+
     # Create new features
+    pb.update(5)
+    pb.refresh()
+    pb.set_description(msg + 'Modification of Features')
     xdf = features_modification(xdf, test)
+
     # Encode categorical features
+    pb.update(6)
+    pb.refresh()
+    pb.set_description(msg + 'Categorical Data Encoding')
     xdf = categorical_encoding(xdf)
+
     # Scale data
+    pb.update(7)
+    pb.refresh()
+    pb.set_description(msg + 'Data Scaling')
     xdf = scale_data(xdf, path, test)
+
     # Add an id for each line
+    pb.update(8)
+    pb.refresh()
+    pb.set_description(msg + 'Create an Index 1D')
     xdf = create_id(xdf)
+
     # Save data
+    pb.update(9)
+    pb.refresh()
+    pb.set_description(msg + 'Saving Data')
     path = '.'.join(path.split('.')[:-1]) + "_processed." + path.split('.')[-1]
     xdf.to_netcdf(path, engine='scipy')
 
