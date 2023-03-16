@@ -22,15 +22,20 @@ class LSTMModel(nn.Module):
         self.cnn = nn.Conv1d(1, 1, kernel_size=3)
         self.bn_cnn = nn.BatchNorm1d(self.hidden_size - 2) # because kernel_size = 3
         
-        self.g_linear = nn.Linear(self.g_in_features, self.g_in_features)
-        self.g_bn = nn.BatchNorm1d(self.g_in_features)
+        self.g_linear_1 = nn.Linear(self.g_in_features, 2*self.g_in_features)
+        self.g_bn_1 = nn.BatchNorm1d(2*self.g_in_features)
+        self.g_linear_2 = nn.Linear(2*self.g_in_features, self.g_in_features)
+        self.g_bn_2 = nn.BatchNorm1d(self.g_in_features)
         
-        self.c_linear_1 = nn.Linear(self.c_in_features, 4*self.c_in_features)
-        self.c_linear_2 = nn.Linear(4*self.c_in_features, 4*self.c_in_features)
+        self.c_linear_1 = nn.Linear(self.c_in_features, 2*self.c_in_features)
+        self.c_bn_1 = nn.BatchNorm1d(2*self.c_in_features)
+        self.c_linear_2 = nn.Linear(2*self.c_in_features, 4*self.c_in_features)
+        self.c_bn_2 = nn.BatchNorm1d(4*self.c_in_features)
         self.c_linear_3 = nn.Linear(4*self.c_in_features, 2*self.c_in_features)
-        self.c_linear_4 = nn.Linear(2*self.c_in_features, 2*self.c_in_features)
-        self.c_linear_5 = nn.Linear(2*self.c_in_features, self.c_in_features)
-        self.c_linear_6 = nn.Linear(self.c_in_features, 1)
+        self.c_bn_3 = nn.BatchNorm1d(2*self.c_in_features)
+        self.c_linear_4 = nn.Linear(2*self.c_in_features, self.c_in_features)
+        self.c_bn_4 = nn.BatchNorm1d(self.c_in_features)
+        self.c_linear_5 = nn.Linear(self.c_in_features, 1)
         
         self.tanh = nn.Tanh()
         self.relu = nn.ReLU()
@@ -61,42 +66,39 @@ class LSTMModel(nn.Module):
         # Spectral Conv1D
         s_output = torch.unsqueeze(s_output, 1) # (batch_size, num_layers) to (batch_size, 1, num_layers)        
         s_output = self.cnn(s_output)
-        s_output = torch.squeeze(s_output) # (batch_size, 1, num_layers - 2) to (batch_size, num_layers - 2)           
-        s_output = self.bn_cnn(s_output)
+        s_output = self.bn_cnn(torch.squeeze(s_output)) # (batch_size, 1, num_layers - 2) to (batch_size, num_layers - 2)           
         s_output = self.relu(s_output)
         s_output = self.dropout(s_output)
         
         # Meteo Conv1D
         m_output = torch.unsqueeze(m_output, 1)    
         m_output = self.cnn(m_output)
-        m_output = torch.squeeze(m_output)        
-        m_output = self.bn_cnn(m_output)
+        m_output = self.bn_cnn(torch.squeeze(m_output))    
         m_output = self.relu(m_output)
         m_output = self.dropout(m_output)
         
-        # # Geo FC
-        g_output = self.g_linear(g_input)
-        g_output = self.g_bn(g_output)
+        # Geo FC
+        g_output = self.g_bn_1(self.g_linear_1(g_input))
+        g_output = self.relu(g_output)
+        g_output = self.dropout(g_output)
+        g_output = self.g_bn_2(self.g_linear_2(g_output))
         g_output = self.relu(g_output)
         g_output = self.dropout(g_output)
         
         # Concatanate inputs
         c_input = torch.cat((s_output, m_output, g_input), 1)
-        c_output = self.c_linear_1(c_input)
+        c_output = self.c_bn_1(self.c_linear_1(c_input))
         c_output = self.relu(c_output)
         c_output = self.dropout(c_output)
-        c_output = self.c_linear_2(c_output)
+        c_output = self.c_bn_2(self.c_linear_2(c_output))
         c_output = self.relu(c_output)
         c_output = self.dropout(c_output)
-        c_output = self.c_linear_3(c_output)
+        c_output = self.c_bn_3(self.c_linear_3(c_output))
         c_output = self.relu(c_output)
         c_output = self.dropout(c_output)
-        c_output = self.c_linear_4(c_output)
+        c_output = self.c_bn_4(self.c_linear_4(c_output))
         c_output = self.relu(c_output)
         c_output = self.dropout(c_output)
-        c_output = self.c_linear_5(c_output)
-        c_output = self.relu(c_output)
-        c_output = self.dropout(c_output)
-        output = self.c_linear_6(c_output)
+        output = self.c_linear_5(c_output)
         
         return output

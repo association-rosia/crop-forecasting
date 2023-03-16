@@ -8,6 +8,8 @@ import os, sys
 parent = os.path.abspath('.')
 sys.path.insert(1, parent)
 
+from utils import ROOT_DIR
+from os.path import join
 from src.constants import FOLDER, S_COLUMNS, M_COLUMNS, G_COLUMNS
 
 import numpy as np
@@ -33,13 +35,14 @@ def main():
     wandb.init(
         project='winged-bull',
         config = {
-            'batch_size': 16, # try 4, 8, 16, 32
-            'hidden_size': 128, # try 128 to 512
+            'batch_size': 32,
+            'hidden_size': 512, # try 128 to 512
             'num_layers': 2, # try 1 to 4
-            'learning_rate': 1e-4,
+            'learning_rate': 1e-3,
             'dropout': 0.2,
-            'epochs': 100,
+            'epochs': 50,
             'optimizer': 'AdamW', 
+            'scheduler_patience': 10,
             'criterion': 'MSELoss',
             'val_rate': 0.2
         }
@@ -60,7 +63,7 @@ def main():
     
     criterion = nn.MSELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=wandb.config['learning_rate'])
-    scheduler = ReduceLROnPlateau(optimizer, patience=10)
+    scheduler = ReduceLROnPlateau(optimizer, patience=wandb.config['scheduler_patience'])
 
     train_config = {
         'model': model,
