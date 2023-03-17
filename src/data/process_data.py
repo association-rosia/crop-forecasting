@@ -20,7 +20,7 @@ sys.path.insert(1, parent)
 
 from tqdm import tqdm
 
-from src.constants import FOLDER, S_COLUMNS, G_COLUMNS, M_COLUMNS, TARGET
+from src.constants import FOLDER, S_COLUMNS, G_COLUMNS, M_COLUMNS, TARGET, TARGET_TEST
 
 from utils import ROOT_DIR
 from os.path import join
@@ -149,7 +149,9 @@ def features_modification(xdf: xr.Dataset, test: bool) -> xr.Dataset:
 
     # time and District are keys to link with weather data
     columns = S_COLUMNS + G_COLUMNS + M_COLUMNS + ["time", "District"]
-    if not test:
+    if test:
+        columns.append(TARGET_TEST)
+    else:
         columns.append(TARGET)
     xdf = xdf[columns]
 
