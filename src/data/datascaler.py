@@ -55,7 +55,7 @@ class DatasetScaler:
         ) -> xr.Dataset:
             df = xdf[columns].to_dataframe()
             df.loc[:, columns] = scaler.transform(df[columns])
-            xdf_scale = df.to_xarray()
+            xdf_scale = df[columns].to_xarray()
             xdf = xr.merge([xdf_scale, xdf], compat="override")
             return xdf
 
@@ -83,7 +83,7 @@ class DatasetScaler:
         ) -> xr.Dataset:
             df = xdf[columns].to_dataframe()
             df.loc[:, columns] = scaler.inverse_transform(df[columns])
-            xdf_scale = df.to_xarray()
+            xdf_scale = df[columns].to_xarray()
             xdf = xr.merge([xdf_scale, xdf], compat="override")
             return xdf
 
