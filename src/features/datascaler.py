@@ -37,8 +37,8 @@ class DatasetScaler:
             scaler: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer, MinMaxScaler],
         ):
             df = xdf[columns].to_dataframe()
-            scaler.fit(df[columns])
-            return scaler
+            
+            return scaler.fit(df[columns])
 
         # Fit S data scaler
         self.scaler_s = fit_scaler(xdf, self.columns_s, self.scaler_s)
@@ -48,6 +48,8 @@ class DatasetScaler:
         self.scaler_m = fit_scaler(xdf, self.columns_m, self.scaler_m)
         # Fit Target data scaler
         self.scaler_t = fit_scaler(xdf, [target], self.scaler_t)
+
+        return self
 
     def transform(self, xdf: xr.Dataset, target: str = None) -> xr.Dataset:
         def transform_data(
@@ -73,9 +75,7 @@ class DatasetScaler:
         return xdf
 
     def fit_transform(self, xdf: xr.Dataset, target: str) -> xr.Dataset:
-        self.fit(xdf, target)
-        xdf = self.transform(xdf, target)
-        return xdf
+        return self.fit(xdf, target).transform(xdf, target)
 
     def inverse_transform(self, xdf: xr.Dataset, target: str = None):
         def inverse_transform_data(

@@ -1,5 +1,4 @@
 import glob
-import joblib
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -10,90 +9,100 @@ import xarray as xr
 
 from scipy.signal import savgol_filter
 
-from datascaler import DatasetScaler
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-
 import os, sys
 
 parent = os.path.abspath(".")
 sys.path.insert(1, parent)
 
-from tqdm import tqdm
-
-from src.constants import FOLDER, S_COLUMNS, G_COLUMNS, M_COLUMNS, TARGET, TARGET_TEST
+from src.constants import S_COLUMNS, G_COLUMNS, M_COLUMNS
 
 from utils import ROOT_DIR
 from os.path import join
 
 
-def features_modification(self, xdf: xr.Dataset, target: str) -> xr.Dataset:
-        def find_columns(real_list: list[str], del_list: list[str]):
-            list_col = []
-            for real_col in real_list:
-                for del_col in del_list:
-                    if del_col in real_col:
-                        list_col.append(real_col)
-            return list_col
+from sklearn.base import OneToOneFeatureMixin, TransformerMixin, BaseEstimator
 
 
+class Convertor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
+    def __init__(self, agg: bool = None, weather: bool = True, vi: bool = True) -> None:
+        self.agg = agg
+        self.weather = weather
+        self.vi = vi
 
-        xdf["time"] = xdf["time"].astype(np.datetime64)
-        xdf["datetime"] = xdf["datetime"].astype(np.datetime64)
-        xdf = xdf.reset_coords("time")
+    def to_dataframe(self, X:xr.Dataset)->pd.DataFrame:
+        col = 'agg' if self.agg else 'state_dev'
+        df = X.to_dataframe()
+        df.set_index(G_COLUMNS, append=True, inplace=True)
+        df.reset_index(col, inplace=True)
+        df[col] = df[col].astype(str)
+        df = df.pivot(columns=col)
+        df.columns = df.columns.map('_'.join).str.strip('_')
+        df.reset_index(G_COLUMNS, inplace=True)
+        df = df.reorder_levels(['ts_obs', 'ts_aug']).sort_index()
+        return df
 
-        # time and District are keys to link with weather data
-        columns = S_COLUMNS + G_COLUMNS + M_COLUMNS + ["time", "District", target]
-        xdf = xdf[columns]
+    def merge_dimensions(self, X: xr.Dataset)->xr.Dataset:
+        X = xr.merge([X[G_COLUMNS], X[M_COLUMNS].sel(datetime=X['time'], name=X['District']), X[S_COLUMNS]])
+        X = X.drop(['name', 'datetime', 'time'])
+        return X
 
-        return xdf
+    def compute_agg(self, X:xr.Dataset)->xr.Dataset:
+        X = xr.concat([X.mean(dim='state_dev'), X.max(dim='state_dev'), X.min(dim='state_dev')], dim='agg')
+        X['agg'] = ['mean', 'max', 'min'] 
+        return X
 
+    def fit(self, X: xr.Dataset, y=None)->xr.Dataset:
+        return self
+    
+    def transform(self, X: xr.Dataset)->xr.Dataset:
+        X = self.merge_dimensions(X)
+        if self.agg:
+            X = self.compute_agg(X)
+        if not self.weather:
+            X = X.drop(M_COLUMNS)
+        if not self.vi:
+            X = X.drop(S_COLUMNS)
+        X = self.to_dataframe(X)
+        return X
+    
 
-class Convertor:
-    def __init__(self, agg: bool = None, observation: bool = True, weather: bool = True, vi: bool = True,) -> None:
-        pass
-
-
-class Smoothor:
+class Smoothor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
     def __init__(self, mode: str = 'savgol') -> None:
         self.mode = mode
 
-    def smooth_savgol(self, xdf: xr.Dataset) -> xr.Dataset:
+    def smooth_savgol(self, ds: xr.Dataset) -> xr.Dataset:
         # apply savgol_filter to vegetable indice
-        xdf_s = xr.apply_ufunc(
+        ds_s = xr.apply_ufunc(
             savgol_filter,
-            xdf[S_COLUMNS],
+            ds[S_COLUMNS],
             kwargs={"axis": 2, "window_length": 12, "polyorder": 4, "mode": "mirror"},
         )
         # merge both dataset and override old vegetable indice and bands
-        return xr.merge([xdf_s, xdf], compat="override")
+        return xr.merge([ds_s, ds], compat="override")
     
     def fit(self, X: xr.Dataset, y=None)->xr.Dataset:
-        return X
+        return self
     
-    def transform(self, X: xr.Dataset, y=None)->xr.Dataset:
+    def transform(self, X: xr.Dataset)->xr.Dataset:
         if self.mode == 'savgol':
             X = self.smooth_savgol(X)
         
         return X
-    
-    def fit_transform(self, X: xr.Dataset, y=None)->xr.Dataset:
-        X = self.fit(X)
-        X = self.transform(X)
 
 
 class Concatenator:
     def __init__(self) -> None:
         pass
 
-    def add_observation(self, xdf: xr.Dataset, test: bool) -> xr.Dataset:
-        def categorical_encoding(xdf: xr.Dataset) -> xr.Dataset:
-            xdf["Rice Crop Intensity(D=Double, T=Triple)"] = (
-                xdf["Rice Crop Intensity(D=Double, T=Triple)"]
+    def add_observation(self, ds: xr.Dataset, test: bool) -> xr.Dataset:
+        def categorical_encoding(ds: xr.Dataset) -> xr.Dataset:
+            ds["Rice Crop Intensity(D=Double, T=Triple)"] = (
+                ds["Rice Crop Intensity(D=Double, T=Triple)"]
                 .str.replace("D", "2")
                 .str.replace("T", "3")
                 .astype(np.int8)
             )
-            return xdf
+            return ds
         
         if test:
             file_name = 'test.csv'
@@ -104,19 +113,18 @@ class Concatenator:
 
         df = pd.read_csv(path)
         df.index.name = "ts_obs"
-        xdf = xr.merge([xdf, df.to_xarray()])
-        xdf = categorical_encoding(xdf)
+        ds = xr.merge([ds, df.to_xarray()])
+        ds = categorical_encoding(ds)
 
-        return xdf
+        return ds
 
+    def add_weather(self, ds: xr.Dataset) -> xr.Dataset:
+        def features_modification(ds: xr.Dataset) -> xr.Dataset:
+            ds["sunrise"] = ds["sunrise"].astype(np.datetime64)
+            ds["sunset"] = ds["sunset"].astype(np.datetime64)
 
-    def add_weather(self, xdf: xr.Dataset) -> xr.Dataset:
-        def features_modification(xdf: xr.Dataset) -> xr.Dataset:
-            xdf["sunrise"] = xdf["sunrise"].astype(np.datetime64)
-            xdf["sunset"] = xdf["sunset"].astype(np.datetime64)
-
-            xdf["solarexposure"] = (xdf["sunset"] - xdf["sunrise"]).dt.seconds
-            return xdf
+            ds["solarexposure"] = (ds["sunset"] - ds["sunrise"]).dt.seconds
+            return ds
 
         weather = []
         for path in glob.glob(join(ROOT_DIR, "data", "external", 'weather', "*.csv")):
@@ -126,87 +134,74 @@ class Concatenator:
         df_weather["datetime"] = pd.to_datetime(df_weather["datetime"])
         df_weather["name"] = df_weather["name"].str.replace(" ", "_")
         df_weather.set_index(["datetime", "name"], inplace=True)
-        xdf_weather = df_weather.to_xarray().set_coords(["datetime", "name"])
-        xdf_weather["datetime"] = xdf_weather["datetime"].dt.strftime("%Y-%m-%d")
-        xdf_weather = features_modification(xdf_weather)
-        xdf = xr.merge([xdf, xdf_weather])
+        ds_weather = df_weather.to_xarray().set_coords(["datetime", "name"])
+        ds_weather["datetime"] = ds_weather["datetime"].dt.strftime("%Y-%m-%d")
+        ds_weather = features_modification(ds_weather)
+        ds = xr.merge([ds, ds_weather])
 
-        return xdf
+        return ds
 
+    def compute_vi(self, ds: xr.Dataset) -> xr.Dataset:
+        def compute_ndvi(ds: xr.Dataset) -> xr.Dataset:
+            return (ds.nir - ds.red) / (ds.nir + ds.red)
 
-    def compute_vi(self, xdf: xr.Dataset) -> xr.Dataset:
-        def compute_ndvi(xdf: xr.Dataset) -> xr.Dataset:
-            return (xdf.nir - xdf.red) / (xdf.nir + xdf.red)
+        def compute_savi(ds, L=0.5) -> xr.Dataset:
+            return 1 + L * (ds.nir - ds.red) / (ds.nir + ds.red + L)
 
-        def compute_savi(xdf, L=0.5) -> xr.Dataset:
-            return 1 + L * (xdf.nir - xdf.red) / (xdf.nir + xdf.red + L)
+        def compute_evi(ds, G=2.5, L=1, C1=6, C2=7.5) -> xr.Dataset:
+            return G * (ds.nir - ds.red) / (ds.nir + C1 * ds.red - C2 * ds.blue + L)
 
-        def compute_evi(xdf, G=2.5, L=1, C1=6, C2=7.5) -> xr.Dataset:
-            return G * (xdf.nir - xdf.red) / (xdf.nir + C1 * xdf.red - C2 * xdf.blue + L)
+        def compute_rep(ds: xr.Dataset) -> xr.Dataset:
+            rededge = (ds.red + ds.rededge3) / 2
+            return 704 + 35 * (rededge - ds.rededge1) / (ds.rededge2 - ds.rededge1)
 
-        def compute_rep(xdf: xr.Dataset) -> xr.Dataset:
-            rededge = (xdf.red + xdf.rededge3) / 2
-            return 704 + 35 * (rededge - xdf.rededge1) / (xdf.rededge2 - xdf.rededge1)
+        def compute_osavi(ds: xr.Dataset) -> xr.Dataset:
+            return (ds.nir - ds.red) / (ds.nir + ds.red + 0.16)
 
-        def compute_osavi(xdf: xr.Dataset) -> xr.Dataset:
-            return (xdf.nir - xdf.red) / (xdf.nir + xdf.red + 0.16)
+        def compute_rdvi(ds: xr.Dataset) -> xr.Dataset:
+            return (ds.nir - ds.red) / np.sqrt(ds.nir + ds.red)
 
-        def compute_rdvi(xdf: xr.Dataset) -> xr.Dataset:
-            return (xdf.nir - xdf.red) / np.sqrt(xdf.nir + xdf.red)
+        def compute_mtvi1(ds: xr.Dataset) -> xr.Dataset:
+            return 1.2 * (1.2 * (ds.nir - ds.green) - 2.5 * (ds.red - ds.green))
 
-        def compute_mtvi1(xdf: xr.Dataset) -> xr.Dataset:
-            return 1.2 * (1.2 * (xdf.nir - xdf.green) - 2.5 * (xdf.red - xdf.green))
-
-        def compute_lswi(xdf: xr.Dataset) -> xr.Dataset:
-            return (xdf.nir - xdf.swir) / (xdf.nir + xdf.swir)
+        def compute_lswi(ds: xr.Dataset) -> xr.Dataset:
+            return (ds.nir - ds.swir) / (ds.nir + ds.swir)
 
         # compute all vegetable indice
-        xdf["ndvi"] = compute_ndvi(xdf)
-        xdf["savi"] = compute_savi(xdf)
-        xdf["evi"] = compute_evi(xdf)
-        xdf["rep"] = compute_rep(xdf)
-        xdf["osavi"] = compute_osavi(xdf)
-        xdf["rdvi"] = compute_rdvi(xdf)
-        xdf["mtvi1"] = compute_mtvi1(xdf)
-        xdf["lswi"] = compute_lswi(xdf)
+        ds["ndvi"] = compute_ndvi(ds)
+        ds["savi"] = compute_savi(ds)
+        ds["evi"] = compute_evi(ds)
+        ds["rep"] = compute_rep(ds)
+        ds["osavi"] = compute_osavi(ds)
+        ds["rdvi"] = compute_rdvi(ds)
+        ds["mtvi1"] = compute_mtvi1(ds)
+        ds["lswi"] = compute_lswi(ds)
 
-        return xdf
+        return ds
 
-
-    def statedev_fill(self, xdf: xr.Dataset) -> xr.Dataset:
+    def statedev_fill(self, ds: xr.Dataset) -> xr.Dataset:
         def replaceinf(arr: np.ndarray) -> np.ndarray:
             if np.issubdtype(arr.dtype, np.number):
                 arr[np.isinf(arr)] = np.nan
             return arr
 
         # replace infinite value by na
-        xr.apply_ufunc(replaceinf, xdf[S_COLUMNS])
+        xr.apply_ufunc(replaceinf, ds[S_COLUMNS])
         # compute mean of all stage of developpement and all obsevation
-        xdf_mean = xdf.mean(dim="ts_aug", skipna=True)
+        ds_mean = ds.mean(dim="ts_aug", skipna=True)
         # fill na value with computed mean
-        xdf = xdf.fillna(xdf_mean)
+        ds = ds.fillna(ds_mean)
         # compute mean of all stage of developpement of rice field to complete last na values
-        xdf_mean = xdf_mean.mean(dim="ts_obs", skipna=True)
+        ds_mean = ds_mean.mean(dim="ts_obs", skipna=True)
         # fill na value with computed mean
-        xdf = xdf.fillna(xdf_mean)
+        ds = ds.fillna(ds_mean)
 
-        return xdf
-
-
-    def fit(self, X: xr.Dataset, test: bool = None, y = None)->xr.Dataset:
-        return X
+        return ds
         
+    def transform(self, ds: xr.Dataset, test: bool)->xr.Dataset:
+        ds = self.add_observation(ds, test)
+        ds = self.add_weather(ds)
+        ds = self.compute_vi(ds)
+        ds = self.statedev_fill(ds)
 
-    def transform(self, X: xr.Dataset, test: bool, y = None)->xr.Dataset:
-        X = self.add_observation(X, test)
-        X = self.add_weather(X)
-        X = self.compute_vi(X)
-        X = self.statedev_fill(X)
-
-        return X
-    
-    
-    def fit_transform(self, X: xr.Dataset, test: bool, y = None)->xr.Dataset:
-        X = self.fit(X)
-        X = self.transform(X, test)
-        return X
+        return ds
