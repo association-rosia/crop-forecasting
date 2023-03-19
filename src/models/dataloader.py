@@ -69,7 +69,7 @@ def get_loaders(config, num_workers):
 
     dataset_path = join(ROOT_DIR, 'data', 'processed', FOLDER, 'train_processed.nc')
     xdf_train = xr.open_dataset(dataset_path, engine='scipy')
-    train_idx, val_idx = train_test_split(xdf_train.ts_obs, test_size=val_rate, random_state=42)
+    train_idx, val_idx = train_test_split(xdf_train.ts_obs, test_size=val_rate) #, random_state=42)
 
     train_array = xdf_train.sel(ts_obs=train_idx)
     train_shape = train_array['ts_id'].shape

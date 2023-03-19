@@ -35,11 +35,11 @@ def main():
     wandb.init(
         project='winged-bull',
         config = {
-            'batch_size': 32,
-            'hidden_size': 512, # try 128 to 512
+            'batch_size': 16,
+            'hidden_size': 128, # try 128 to 512
             'num_layers': 2, # try 1 to 4
-            'learning_rate': 1e-3,
-            'dropout': 0.2,
+            'learning_rate': 1e-4,
+            'dropout': 0.5,
             'epochs': 50,
             'optimizer': 'AdamW', 
             'scheduler_patience': 10,
