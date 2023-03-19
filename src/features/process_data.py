@@ -1,15 +1,13 @@
-import glob
 import joblib
 import warnings
 
 warnings.filterwarnings("ignore")
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 
-from scipy.signal import savgol_filter
 
+from preprocessing import Smoothor, Concatenator
 from datascaler import DatasetScaler
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
@@ -23,126 +21,10 @@ from tqdm import tqdm
 from src.constants import FOLDER, S_COLUMNS, G_COLUMNS, M_COLUMNS, TARGET, TARGET_TEST
 
 from utils import ROOT_DIR
-from os.path import join
-
-
-def add_observation(xdf: xr.Dataset, test: bool) -> xr.Dataset:
-    if test:
-        path = join(ROOT_DIR, "data", "raw", "test.csv")
-    else:
-        path = join(ROOT_DIR, "data", "raw", "train.csv")
-
-    df = pd.read_csv(path)
-    df.index.name = "ts_obs"
-    xdf = xr.merge([xdf, df.to_xarray()])
-    return xdf
-
-
-def add_weather(xdf: xr.Dataset) -> xr.Dataset:
-    xdf = xdf
-
-    weather = []
-    for path in glob.glob(join(ROOT_DIR, "data", "raw", "weather", "*.csv")):
-        weather.append(pd.read_csv(path))
-
-    df_weather = pd.concat(weather, axis="index")
-    df_weather["datetime"] = pd.to_datetime(df_weather["datetime"])
-    df_weather["name"] = df_weather["name"].str.replace(" ", "_")
-    df_weather.set_index(["datetime", "name"], inplace=True)
-    xdf_weather = df_weather.to_xarray().set_coords(["datetime", "name"])
-    xdf_weather["datetime"] = xdf_weather["datetime"].dt.strftime("%Y-%m-%d")
-
-    xdf = xr.merge([xdf, xdf_weather])
-
-    return xdf
-
-
-def compute_vi(xdf: xr.Dataset) -> xr.Dataset:
-    def compute_ndvi(xdf: xr.Dataset) -> xr.Dataset:
-        return (xdf.nir - xdf.red) / (xdf.nir + xdf.red)
-
-    def compute_savi(xdf, L=0.5) -> xr.Dataset:
-        return 1 + L * (xdf.nir - xdf.red) / (xdf.nir + xdf.red + L)
-
-    def compute_evi(xdf, G=2.5, L=1, C1=6, C2=7.5) -> xr.Dataset:
-        return G * (xdf.nir - xdf.red) / (xdf.nir + C1 * xdf.red - C2 * xdf.blue + L)
-
-    def compute_rep(xdf: xr.Dataset) -> xr.Dataset:
-        rededge = (xdf.red + xdf.rededge3) / 2
-        return 704 + 35 * (rededge - xdf.rededge1) / (xdf.rededge2 - xdf.rededge1)
-
-    def compute_osavi(xdf: xr.Dataset) -> xr.Dataset:
-        return (xdf.nir - xdf.red) / (xdf.nir + xdf.red + 0.16)
-
-    def compute_rdvi(xdf: xr.Dataset) -> xr.Dataset:
-        return (xdf.nir - xdf.red) / np.sqrt(xdf.nir + xdf.red)
-
-    def compute_mtvi1(xdf: xr.Dataset) -> xr.Dataset:
-        return 1.2 * (1.2 * (xdf.nir - xdf.green) - 2.5 * (xdf.red - xdf.green))
-
-    def compute_lswi(xdf: xr.Dataset) -> xr.Dataset:
-        return (xdf.nir - xdf.swir) / (xdf.nir + xdf.swir)
-
-    # compute all vegetable indice
-    xdf["ndvi"] = compute_ndvi(xdf)
-    xdf["savi"] = compute_savi(xdf)
-    xdf["evi"] = compute_evi(xdf)
-    xdf["rep"] = compute_rep(xdf)
-    xdf["osavi"] = compute_osavi(xdf)
-    xdf["rdvi"] = compute_rdvi(xdf)
-    xdf["mtvi1"] = compute_mtvi1(xdf)
-    xdf["lswi"] = compute_lswi(xdf)
-
-    return xdf
-
-
-def statedev_fill(xdf: xr.Dataset) -> xr.Dataset:
-    def replaceinf(arr: np.ndarray) -> np.ndarray:
-        if np.issubdtype(arr.dtype, np.number):
-            arr[np.isinf(arr)] = np.nan
-        return arr
-
-    # replace infinite value by na
-    xr.apply_ufunc(replaceinf, xdf[S_COLUMNS])
-    # compute mean of all stage of developpement and all obsevation
-    xdf_mean = xdf.mean(dim="ts_aug", skipna=True)
-    # fill na value with computed mean
-    xdf = xdf.fillna(xdf_mean)
-    # compute mean of all stage of developpement of rice field to complete last na values
-    xdf_mean = xdf_mean.mean(dim="ts_obs", skipna=True)
-    # fill na value with computed mean
-    xdf = xdf.fillna(xdf_mean)
-
-    return xdf
-
-
-def smooth(xdf: xr.Dataset) -> xr.Dataset:
-    # apply savgol_filter to vegetable indice
-    xdf_s = xr.apply_ufunc(
-        savgol_filter,
-        xdf[S_COLUMNS],
-        kwargs={"axis": 2, "window_length": 12, "polyorder": 4, "mode": "mirror"},
-    )
-    # merge both dataset and override old vegetable indice and bands
-    return xr.merge([xdf_s, xdf], compat="override")
-
-
-def categorical_encoding(xdf: xr.Dataset) -> xr.Dataset:
-    xdf["Rice Crop Intensity(D=Double, T=Triple)"] = (
-        xdf["Rice Crop Intensity(D=Double, T=Triple)"]
-        .str.replace("D", "2")
-        .str.replace("T", "3")
-        .astype(np.int8)
-    )
-    return xdf
+# from os.path import join
 
 
 def features_modification(xdf: xr.Dataset, test: bool) -> xr.Dataset:
-    xdf["sunrise"] = xdf["sunrise"].astype(np.datetime64)
-    xdf["sunset"] = xdf["sunset"].astype(np.datetime64)
-
-    xdf["solarexposure"] = (xdf["sunset"] - xdf["sunrise"]).dt.seconds
-
     xdf["time"] = xdf["time"].astype(np.datetime64)
     xdf["datetime"] = xdf["datetime"].astype(np.datetime64)
     xdf = xdf.reset_coords("time")
@@ -158,9 +40,9 @@ def features_modification(xdf: xr.Dataset, test: bool) -> xr.Dataset:
     return xdf
 
 
-def scale_data(xdf: xr.Dataset, path: str, test: bool) -> xr.Dataset:
+def scale_data(xdf: xr.Dataset, dir: str, test: bool) -> xr.Dataset:
     # Path for saving scaler
-    path = "/".join(path.split("/")[:-1]) + "/scaler_dataset.joblib"
+    path = os.path.join(dir, "scaler_dataset.joblib")
 
     if not test:
         scaler = DatasetScaler(
@@ -182,10 +64,10 @@ def scale_data(xdf: xr.Dataset, path: str, test: bool) -> xr.Dataset:
 
 
 def create_id(xdf: xr.Dataset) -> xr.Dataset:
-    ts_id = np.arange(xdf.dims["ts_obs"] * xdf.dims["ts_aug"])
-    ts_id = ts_id.reshape((xdf.dims["ts_obs"], xdf.dims["ts_aug"]))
-    xdf = xdf.assign_coords({"ts_id": (("ts_obs", "ts_aug"), ts_id)})
-    return xdf
+        ts_id = np.arange(xdf.dims["ts_obs"] * xdf.dims["ts_aug"])
+        ts_id = ts_id.reshape((xdf.dims["ts_obs"], xdf.dims["ts_aug"]))
+        xdf = xdf.assign_coords({"ts_id": (("ts_obs", "ts_aug"), ts_id)})
+        return xdf
 
 
 def create_pb(nb_action: int, test: str):
@@ -197,78 +79,65 @@ def create_pb(nb_action: int, test: str):
     return progress_bar, msg
 
 
-def process_data(path: str, test: bool = False):
-    pb, msg = create_pb(10, test)
+def process_data(folder: str, test: bool = False):
+    pb, msg = create_pb(6, test)
+    
+    file_name = 'train.nc'
+    if test:
+        file_name = 'test.nc'
+
+    processed_dir = os.path.join(ROOT_DIR, 'data', 'processed', folder)
+    os.makedirs(processed_dir, exist_ok=True)
+    processed_path = os.path.join(processed_dir, file_name)
+    interim_dir = os.path.join(ROOT_DIR, 'data', 'interim', folder)
+    os.makedirs(interim_dir, exist_ok=True)
+    interim_path = os.path.join(interim_dir, file_name)
 
     pb.set_description(msg + "Read Data")
-    xdf = xr.open_dataset(path)
+    path_sat = os.path.join(ROOT_DIR, 'data', 'external', 'satellite', folder, file_name)
+    xdf = xr.open_dataset(path_sat, engine='scipy')
 
-    # Add observation to the dataset
-    pb.update(0)
-    pb.refresh()
-    pb.set_description(msg + "Add Observation")
-    xdf = add_observation(xdf, test)
-
-    # Add weather to the dataset
+    # Concatenate and create all features
     pb.update(1)
     pb.refresh()
-    pb.set_description(msg + "Add Weather Data")
-    xdf = add_weather(xdf)
+    pb.set_description(msg + "Concatenate Data")
+    xdf = Concatenator().transform(xdf, test)
 
-    # Compute vegetable indice
-    pb.update(2)
-    pb.refresh()
-    pb.set_description(msg + "Compute VI")
-    xdf = compute_vi(xdf)
-
-    # Fill na values
-    pb.update(3)
-    pb.refresh()
-    pb.set_description(msg + "Fill null value")
-    xdf = statedev_fill(xdf)
+    # Save for ML 
+    xdf.to_netcdf(interim_path, engine='scipy')
 
     # Smooth variable
-    pb.update(4)
+    pb.update(2)
     pb.refresh()
     pb.set_description(msg + "Smooth VI")
-    xdf = smooth(xdf)
+    xdf = Smoothor(mode='savgol').transform(xdf)
 
     # Create new features
-    pb.update(5)
+    pb.update(3)
     pb.refresh()
     pb.set_description(msg + "Modification of Features")
     xdf = features_modification(xdf, test)
 
-    # Encode categorical features
-    pb.update(6)
-    pb.refresh()
-    pb.set_description(msg + "Categorical Data Encoding")
-    xdf = categorical_encoding(xdf)
 
     # Scale data
-    pb.update(7)
+    pb.update(4)
     pb.refresh()
     pb.set_description(msg + "Data Scaling")
-    xdf = scale_data(xdf, path, test)
+    xdf = scale_data(xdf, processed_dir, test)
 
     # Add an id for each line
-    pb.update(8)
+    pb.update(5)
     pb.refresh()
     pb.set_description(msg + "Create an Index 1D")
     xdf = create_id(xdf)
 
     # Save data
-    pb.update(9)
+    pb.update(6)
     pb.refresh()
     pb.set_description(msg + "Saving Data")
-    path = ".".join(path.split(".")[:-1]) + "_processed." + path.split(".")[-1]
-    xdf.to_netcdf(path, engine="scipy")
-
+    xdf.to_netcdf(processed_path, engine='scipy')
 
 if __name__ == "__main__":
-
     # Cloud filtered data
-    train_path = join(ROOT_DIR, "data", "processed", FOLDER, "train.nc")
-    process_data(train_path)
-    test_path = join(ROOT_DIR, "data", "processed", FOLDER, "test.nc")
-    process_data(test_path, test=True)
+    process_data(FOLDER)
+    process_data(FOLDER, test=True)
