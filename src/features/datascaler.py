@@ -2,7 +2,7 @@ from typing import Union
 
 import xarray as xr
 
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, PowerTransformer, QuantileTransformer
 
 import os, sys
 
@@ -13,13 +13,13 @@ sys.path.insert(1, parent)
 class DatasetScaler:
     def __init__(
         self,
-        scaler_s: Union[StandardScaler, MinMaxScaler],
+        scaler_s: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer],
         columns_s: list[str],
-        scaler_g: Union[StandardScaler, MinMaxScaler],
+        scaler_g: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer],
         columns_g: list[str],
-        scaler_m: Union[StandardScaler, MinMaxScaler],
+        scaler_m: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer],
         columns_m: list[str],
-        scaler_t: Union[StandardScaler, MinMaxScaler],
+        scaler_t: MinMaxScaler,
     ) -> None:
 
         self.scaler_s = scaler_s
@@ -34,7 +34,7 @@ class DatasetScaler:
         def fit_scaler(
             xdf: xr.Dataset,
             columns: list[str],
-            scaler: Union[StandardScaler, MinMaxScaler],
+            scaler: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer, MinMaxScaler],
         ):
             df = xdf[columns].to_dataframe()
             scaler.fit(df[columns])
@@ -51,7 +51,7 @@ class DatasetScaler:
 
     def transform(self, xdf: xr.Dataset, target: str = None) -> xr.Dataset:
         def transform_data(
-            xdf: xr.Dataset, columns: str, scaler: Union[StandardScaler, MinMaxScaler]
+            xdf: xr.Dataset, columns: str, scaler: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer, MinMaxScaler]
         ) -> xr.Dataset:
             df = xdf[columns].to_dataframe()
             df.loc[:, columns] = scaler.transform(df[columns])
@@ -79,7 +79,7 @@ class DatasetScaler:
 
     def inverse_transform(self, xdf: xr.Dataset, target: str = None):
         def inverse_transform_data(
-            xdf: xr.Dataset, columns: str, scaler: Union[StandardScaler, MinMaxScaler]
+            xdf: xr.Dataset, columns: str, scaler: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer, MinMaxScaler]
         ) -> xr.Dataset:
             df = xdf[columns].to_dataframe()
             df.loc[:, columns] = scaler.inverse_transform(df[columns])
