@@ -9,7 +9,6 @@ parent = os.path.abspath('.')
 sys.path.insert(1, parent)
 
 from utils import ROOT_DIR
-from os.path import join
 from src.constants import FOLDER, S_COLUMNS, M_COLUMNS, G_COLUMNS
 
 import numpy as np
@@ -22,7 +21,7 @@ import torch
 
 import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from dataloader import DLDataset, get_loaders
+from dataloader import get_loaders
 from model import LSTMModel
 from trainer import Trainer
 import wandb
@@ -35,16 +34,16 @@ def main():
     wandb.init(
         project='winged-bull',
         config = {
-            'batch_size': 32,
-            'hidden_size': 512, # try 128 to 512
+            'batch_size': 8,
+            'hidden_size': 128, # try 128 to 512
             'num_layers': 2, # try 1 to 4
-            'learning_rate': 1e-3,
-            'dropout': 0.2,
-            'epochs': 50,
+            'learning_rate': 1e-4,
+            'dropout': 0.4,
+            'epochs': 100,
             'optimizer': 'AdamW', 
             'scheduler_patience': 10,
             'criterion': 'MSELoss',
-            'val_rate': 0.2
+            'val_rate': 0.1
         }
     )
 
@@ -78,8 +77,6 @@ def main():
     
     trainer = Trainer(**train_config)
     trainer.train()
-    
-    # make_submission(trainer.model, test_loader)
     
     
 if __name__ == '__main__':
