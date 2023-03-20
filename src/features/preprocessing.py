@@ -26,7 +26,7 @@ from sklearn.base import OneToOneFeatureMixin, TransformerMixin, BaseEstimator
 
 
 class Scaler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
-    def __init__(self, scaler: Union[MinMaxScaler, StandardScaler, RobustScaler, QuantileTransformer]) -> None:
+    def __init__(self, scaler: Union[MinMaxScaler, StandardScaler, RobustScaler, QuantileTransformer] = StandardScaler()) -> None:
         self.scaler = scaler
         
     def fit(self, X: pd.DataFrame, y=None):

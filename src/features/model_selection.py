@@ -5,6 +5,7 @@ import copy
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 from tqdm import tqdm
 
@@ -51,15 +52,14 @@ class OptunaSearch:
 
     def get_trial_param(self, trial):
         trial_params = {}
-        for attr_name, (param_name, param_values) in self.params_optuna.items():
+        for attr_name, (param_name, param_values) in self.params_optuna:
             params = copy.deepcopy(param_values)
             params['name'] = param_name
             trial_params[param_name] = getattr(trial, attr_name)(**params)
-
         return trial_params
     
 
-    def fit(self, X, y):
+    def fit(self, X: xr.Dataset, y: pd.DataFrame):
         def objectif(trial):
             param_estimator = self.get_trial_param(trial)
             estimator = self.estimator.set_params(**param_estimator)
@@ -67,8 +67,11 @@ class OptunaSearch:
             if self.do_cv:
                 score = cross_val_score(estimator, X=X, y=y, cv=ObsKFold()).mean()
             else:
-                estimator = estimator.fit(X[~self.index_test], y=y[~self.index_test])
-                estimator.score(self.X[self.index_test])
+                index_train = [idx for idx in y.index.get_level_values('ts_obs').unique() if not idx in self.index_test]
+                y_train = y.loc[index_train, :].reorder_levels(['ts_obs', 'ts_aug']).sort_index()
+                estimator = estimator.fit(X.sel(ts_obs=index_train), y=y_train)
+                y_test = y.loc[self.index_test, :].reorder_levels(['ts_obs', 'ts_aug']).sort_index()
+                score = estimator.score(X.sel(ts_obs=self.index_test), y=y_test)
             
             # if self.callback:
             #     self.callback(score)

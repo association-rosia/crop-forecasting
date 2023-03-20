@@ -22,6 +22,7 @@ from src.constants import TARGET, TARGET_TEST, FOLDER, S_COLUMNS, G_COLUMNS, M_C
 # Data prepocessing
 from src.features.preprocessing import Smoother, Convertor, Scaler
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, QuantileTransformer
+from sklearn.compose import TransformedTargetRegressor
 from umap import UMAP
 
 # Hyperoptimization
@@ -53,20 +54,25 @@ def main():
     step_list = [
         ('smoother', Smoother()),
         ('convertor', Convertor()),
-        ('scaler', Scaler(StandardScaler())),
-        ('dim_reductor', UMAP()),
+        # ('scaler', Scaler()),
+        # ('dim_reductor', UMAP()),
         ('estimator', XGBRegressor())
     ]
 
-    params_optuna = {
-        'suggest_categorical': ('smoother__mode', {'choices': [None, 'savgol']})
-    }
+    params_optuna = [
+        ('suggest_categorical', ('smoother__mode', {'choices': [None, 'savgol']})),
+        # 'suggest_categorical': ('scaler__scaler', {'choices': [StandardScaler(), RobustScaler(), QuantileTransformer(), MinMaxScaler()]}),
+        ('suggest_categorical', ('convertor__agg', {'choices': [True, False]})),
+        ('suggest_categorical', ('convertor__weather', {'choices': [True, False]})),
+        ('suggest_categorical', ('convertor__vi', {'choices': [True, False]})),
+        # 'suggest_categorical': ('estimator__', {'choices': [True, False]}),
+    ]
 
     pipeline = Pipeline(step_list)
 
     index_test = get_index_test()
 
-    optunasearch = OptunaSearch(pipeline, params_optuna=params_optuna, index_test=index_test, n_trials=2)
+    optunasearch = OptunaSearch(pipeline, params_optuna=params_optuna, index_test=index_test, n_trials=100)
     optunasearch = optunasearch.fit(X, y)
 
     print(optunasearch.study.best_trial)
@@ -82,9 +88,13 @@ def preprocess_y(ds: xr.Dataset, target: str)->pd.DataFrame:
 def get_index_test():
     path = os.path.join(ROOT_DIR, 'data', 'interim', FOLDER, 'index.json')
     with open(path, 'r') as f:
-        index_dict = json.loads(f)
-    index_dict['clusters'][0]['train']['ts_obs']
-    return None#index_test
+        index_dict = json.loads(f.read())
+    index_0 = np.asarray(index_dict['clusters'][0]['train']['ts_obs'])
+    index_1 = np.asarray(index_dict['clusters'][1]['train']['ts_obs'])
+    sub_index_0 = np.random.choice(index_0, size=int(len(index_0)/ 2), replace=False)
+    sub_index_1 = np.random.choice(index_1, size=int(len(index_1)/ 2), replace=False)
+    
+    return np.concatenate([sub_index_0, sub_index_1], axis=0)
 
 
 if __name__ == '__main__':

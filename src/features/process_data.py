@@ -7,7 +7,7 @@ import numpy as np
 import xarray as xr
 
 
-from preprocessing import Smoothor, Concatenator
+from preprocessing import Smoother, Concatenator
 from datascaler import DatasetScaler
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
@@ -110,7 +110,7 @@ def process_data(folder: str, test: bool = False):
     pb.update(2)
     pb.refresh()
     pb.set_description(msg + "Smooth VI")
-    xdf = Smoothor(mode='savgol').transform(xdf)
+    xdf = Smoother(mode='savgol').transform(xdf)
 
     # Create new features
     pb.update(3)
