@@ -52,12 +52,12 @@ def ha_to_degree(field_size): # Field_size (ha)
 
 def create_folders() -> str:
     if NUM_AUGMENT > 1:
-        save_folder = join(ROOT_DIR, 'data', 'processed', f'augment_{NUM_AUGMENT}_{MAX_AUGMENT}') 
+        save_folder = join(ROOT_DIR, 'data', 'external', 'satellite', f'augment_{NUM_AUGMENT}_{MAX_AUGMENT}') 
     elif SIZE == 'fixed':
         degree = str(round(DEGREE, 5)).replace(".", "-")
-        save_folder = join(ROOT_DIR, 'data', 'processed', f'fixed_{degree}') 
+        save_folder = join(ROOT_DIR, 'data', 'external', 'satellite', f'fixed_{degree}') 
     elif SIZE == 'adaptative':
-        save_folder = join(ROOT_DIR, 'data', 'processed', f'adaptative_factor_{FACTOR}') 
+        save_folder = join(ROOT_DIR, 'data', 'external', 'satellite', f'adaptative_factor_{FACTOR}') 
         
     os.makedirs(save_folder, exist_ok=True)
     return save_folder
@@ -176,10 +176,9 @@ class Checkpoint(Exception):
         pass
 
 
-def make_data(path, save_folder):
+def make_data(path, save_file):
     start = time.time()
     checkpoint = False
-    save_file = f'{save_folder}/{path.split("/")[-1].split(".")[0]}.nc'
 
     df: pd.DataFrame = pd.read_csv(path)
 
@@ -208,9 +207,11 @@ if __name__ == '__main__':
     checkpoint = True
     while checkpoint:
         train_path = join(ROOT_DIR, 'data', 'raw', 'train.csv')
-        checkpoint = make_data(train_path, save_folder)
+        train_file = join(save_folder, 'train.nc')
+        checkpoint = make_data(train_path, train_file)
     
     checkpoint = True
     while checkpoint:
         test_path = join(ROOT_DIR, 'data', 'raw', 'test.csv')
-        checkpoint = make_data(test_path, save_folder)
+        test_file = join(save_folder, 'test.nc')
+        checkpoint = make_data(test_path, test_file)
