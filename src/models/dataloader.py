@@ -46,7 +46,7 @@ class DLDataset(Dataset):
         m_input = torch.tensor(g_arr)
         
         if self.test:
-            target = xdf_id['Predicted Rice Yield (kg/ha)'].values
+            target = torch.tensor([0.])
         else:
             target = xdf_id['Rice Yield (kg/ha)'].values
 
@@ -85,7 +85,7 @@ def get_loaders(config, num_workers):
     
     dataset_path = join(ROOT_DIR, 'data', 'processed', FOLDER, 'test_processed.nc')
     xdf_test = xr.open_dataset(dataset_path, engine='scipy')
-    test_dataset = DLDataset(xdf_test)
+    test_dataset = DLDataset(xdf_test, test=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, num_workers=num_workers)
     
     return train_loader, val_loader, test_loader

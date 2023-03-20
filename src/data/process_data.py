@@ -191,7 +191,6 @@ def process_data(path: str, test: bool=False):
     xdf.to_netcdf(path, engine='scipy')
 
 if __name__ == '__main__':
-
     # Cloud filtered data
     train_path = join(ROOT_DIR, 'data', 'processed', FOLDER, 'train.nc')
     process_data(train_path)

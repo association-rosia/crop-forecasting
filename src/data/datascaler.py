@@ -34,8 +34,8 @@ class DatasetScaler:
         self.scaler_t = fit_scaler(xdf, [TARGET], 'minmax')
     
 
-    def transform(self, xdf: xr.Dataset, target: bool=False)->xr.Dataset:
-        def transform_data(xdf: xr.Dataset, columns: str, scaler: Union[StandardScaler, MinMaxScaler])->xr.Dataset:
+    def transform(self, xdf: xr.Dataset, target: bool=False) -> xr.Dataset:
+        def transform_data(xdf: xr.Dataset, columns: str, scaler: Union[StandardScaler, MinMaxScaler]) -> xr.Dataset:
             df = xdf[columns].to_dataframe()
             df.loc[:, columns] = scaler.transform(df[columns])
             xdf_scale = df.to_xarray()
@@ -55,7 +55,7 @@ class DatasetScaler:
 
         return xdf
     
-    def fit_transform(self, xdf: xr.Dataset)->xr.Dataset:
+    def fit_transform(self, xdf: xr.Dataset) -> xr.Dataset:
         self.fit(xdf)
         xdf = self.transform(xdf, True)
         return xdf
