@@ -23,7 +23,7 @@ class Trainer():
         self.scheduler = scheduler
         self.device = device        
         self.timestamp = int(datetime.now().timestamp())
-        self.best_score = 0
+        self.best_score = 0.
 
     def train_one_epoch(self):
         train_loss = 0.
@@ -63,7 +63,7 @@ class Trainer():
         df['observations'] = observations
         df['labels'] = labels
         df['preds'] = preds
-        full_r2_score = r2_score(df.labels, df.preds)    
+        full_r2_score = r2_score(df.labels, df.preds)
         df = df.groupby(['observations']).mean()
         mean_r2_score = r2_score(df.labels, df.preds)
 
@@ -137,5 +137,12 @@ class Trainer():
             
             self.save(val_mean_r2_score)
 
-            wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'val_r2_score': val_r2_score, 'val_mean_r2_score': val_mean_r2_score})
+            wandb.log({
+                'train_loss': train_loss, 
+                'val_loss': val_loss, 
+                'val_r2_score': val_r2_score, 
+                'val_mean_r2_score': val_mean_r2_score,
+                'best_score': self.best_score
+            })
+            
             iter_epoch.write(f'EPOCH {epoch + 1}/{self.epochs}: Train = {train_loss:.5f} - Val = {val_loss:.5f} - Val R2 = {val_r2_score:.5f} - Val mean R2 = {val_mean_r2_score:.5f}')
