@@ -26,7 +26,7 @@ from os.path import join
 # Make data constants
 SIZE = 'adaptative' # 'fixed'
 FACTOR = 1 # for 'adaptative' 
-NUM_AUGMENT = 50
+NUM_AUGMENT = 40
 MAX_AUGMENT = 5
 DEGREE = 0.0014589825157734703 # = ha_to_degree(2.622685) # Field size (ha) mean = 2.622685 (train + test)
 
@@ -45,19 +45,19 @@ def ha_to_degree(field_size): # Field_size (ha)
     then, side_size = sqrt(0.01 * field_size) (km)
     so, degree = side_size / 111 (°)
     '''
-    side_size = math.sqrt(0.01 * field_size)
+    side_size = math.sqrt(0.01 * field_size) 
     degree = side_size / 111
     return degree
 
 
 def create_folders() -> str:
     if NUM_AUGMENT > 1:
-        save_folder = join(ROOT_DIR, 'data', 'processed', f'augment_{NUM_AUGMENT}_{MAX_AUGMENT}') 
+        save_folder = join(ROOT_DIR, 'data', 'external', 'satellite', f'augment_{NUM_AUGMENT}_{MAX_AUGMENT}') 
     elif SIZE == 'fixed':
         degree = str(round(DEGREE, 5)).replace(".", "-")
-        save_folder = join(ROOT_DIR, 'data', 'processed', f'fixed_{degree}') 
+        save_folder = join(ROOT_DIR, 'data', 'external', 'satellite', f'fixed_{degree}') 
     elif SIZE == 'adaptative':
-        save_folder = join(ROOT_DIR, 'data', 'processed', f'adaptative_factor_{FACTOR}') 
+        save_folder = join(ROOT_DIR, 'data', 'external', 'satellite', f'adaptative_factor_{FACTOR}') 
         
     os.makedirs(save_folder, exist_ok=True)
     return save_folder
@@ -159,22 +159,29 @@ def save_data_app(index_row, history_days=130, history_dates=24, resolution=10) 
 def init_df(df: pd.DataFrame, path: str) -> tuple[pd.DataFrame, list]:
     list_data = []
     df.index.name = 'ts_obs'
-
+       
     if os.path.exists(path=path):
         xdf = xr.open_dataset(path, engine='scipy')
         unique = np.unique(xdf['ts_obs'].values)
         list_data.append(xdf)
+
         df = df.loc[~df.index.isin(unique)]
+
     
     return df, list_data
 
 
-def make_data(path, save_folder):
-    checkpoint = False
+class Checkpoint(Exception):
+    def __init__(self):
+        pass
+
+
+def make_data(path, save_file):
     start = time.time()
-    save_file = f'{save_folder}/{path.split("/")[-1].split(".")[0]}.nc'
+    checkpoint = False
 
     df: pd.DataFrame = pd.read_csv(path)
+
     df, list_data = init_df(df, save_file)
 
     print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
@@ -182,27 +189,29 @@ def make_data(path, save_folder):
         with mp.Pool(4) as pool:
             for xds in tqdm(pool.imap(save_data_app, df.iterrows()), total=len(df)):
                 list_data.append(xds)
-                
                 if time.time() - start > 3600:
-                    checkpoint = True
-                    raise Exception('Checkpoint.')
-    except:
-        "Error occurs during the data retrieval..."
-    
-    data = xr.concat(list_data, dim='ts_obs')
-    print(f'\nSave SAR data from {path.split("/")[-1]}...')
-    data.to_netcdf(save_file, engine='scipy')
-    print(f'\nSAR data from {path.split("/")[-1]} saved!')
-    
-    if checkpoint:
-        make_data(path, save_folder)
+                    raise Checkpoint('Checkpoint.')
+    except Checkpoint as c:
+        checkpoint = True
+    finally:
+        data = xr.concat(list_data, dim='ts_obs')
+        print(f'\nSave SAR data from {path.split("/")[-1]}...')
+        data.to_netcdf(save_file, engine='scipy')
+        print(f'\nSAR data from {path.split("/")[-1]} saved!')
+        return checkpoint
     
 
 if __name__ == '__main__':
     save_folder = create_folders()
-
-    train_path = join(ROOT_DIR, 'data', 'raw', 'train.csv')
-    make_data(train_path, save_folder)
-
-    test_path = join(ROOT_DIR, 'data', 'raw', 'test.csv')
-    make_data(test_path, save_folder)
+    
+    checkpoint = True
+    while checkpoint:
+        train_path = join(ROOT_DIR, 'data', 'raw', 'train.csv')
+        train_file = join(save_folder, 'train.nc')
+        checkpoint = make_data(train_path, train_file)
+    
+    checkpoint = True
+    while checkpoint:
+        test_path = join(ROOT_DIR, 'data', 'raw', 'test.csv')
+        test_file = join(save_folder, 'test.nc')
+        checkpoint = make_data(test_path, test_file)
