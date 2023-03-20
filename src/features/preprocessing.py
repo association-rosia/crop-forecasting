@@ -1,4 +1,5 @@
 import glob
+from typing import Union
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -8,6 +9,7 @@ import pandas as pd
 import xarray as xr
 
 from scipy.signal import savgol_filter
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, QuantileTransformer
 
 import os, sys
 
@@ -22,6 +24,17 @@ from os.path import join
 
 from sklearn.base import OneToOneFeatureMixin, TransformerMixin, BaseEstimator
 
+
+class Scaler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
+    def __init__(self, scaler: Union[MinMaxScaler, StandardScaler, RobustScaler, QuantileTransformer]) -> None:
+        self.scaler = scaler
+        
+    def fit(self, X: pd.DataFrame, y=None):
+        self.scaler = self.scaler.fit(X, y)
+        return self
+    
+    def transform(self, X:pd.DataFrame)->pd.DataFrame:
+        return self.scaler.transform(X)
 
 class Convertor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
     def __init__(self, agg: bool = None, weather: bool = True, vi: bool = True) -> None:
@@ -51,10 +64,10 @@ class Convertor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         X['agg'] = ['mean', 'max', 'min'] 
         return X
 
-    def fit(self, X: xr.Dataset, y=None)->xr.Dataset:
+    def fit(self, X: xr.Dataset, y=None):
         return self
     
-    def transform(self, X: xr.Dataset)->xr.Dataset:
+    def transform(self, X: xr.Dataset)->pd.DataFrame:
         X = self.merge_dimensions(X)
         if self.agg:
             X = self.compute_agg(X)
@@ -66,7 +79,7 @@ class Convertor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         return X
     
 
-class Smoothor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
+class Smoother(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
     def __init__(self, mode: str = 'savgol') -> None:
         self.mode = mode
 
@@ -80,7 +93,7 @@ class Smoothor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         # merge both dataset and override old vegetable indice and bands
         return xr.merge([ds_s, ds], compat="override")
     
-    def fit(self, X: xr.Dataset, y=None)->xr.Dataset:
+    def fit(self, X: xr.Dataset, y=None):
         return self
     
     def transform(self, X: xr.Dataset)->xr.Dataset:
