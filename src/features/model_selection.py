@@ -1,6 +1,7 @@
 from collections import defaultdict
 from itertools import product
 import time
+import copy
 
 import numpy as np
 import pandas as pd
@@ -20,8 +21,62 @@ from sklearn.metrics._scorer import _check_multimetric_scoring
 from sklearn.metrics import check_scoring
 
 from sklearn.model_selection import GridSearchCV, KFold
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import cross_val_score
 
 import wandb
+
+import optuna
+
+class OptunaSearch:
+    def __init__(
+            self, 
+            estimator: Pipeline, 
+            params_optuna, 
+            do_cv: bool = False, 
+            index_test = None, 
+            n_trials: int=100, 
+            direction='maximize',
+            callback=None
+            ):
+        
+        self.estimator = estimator
+        self.params_optuna = params_optuna
+        self.do_cv = do_cv
+        self.index_test = index_test
+        self.study = optuna.create_study(direction=direction)
+        self.n_trials = n_trials
+        self.callback = callback
+
+
+    def get_trial_param(self, trial):
+        trial_params = {}
+        for attr_name, (param_name, param_values) in self.params_optuna.items():
+            params = copy.deepcopy(param_values)
+            params['name'] = param_name
+            trial_params[param_name] = getattr(trial, attr_name)(**params)
+
+        return trial_params
+    
+
+    def fit(self, X, y):
+        def objectif(trial):
+            param_estimator = self.get_trial_param(trial)
+            estimator = self.estimator.set_params(**param_estimator)
+
+            if self.do_cv:
+                score = cross_val_score(estimator, X=X, y=y, cv=ObsKFold()).mean()
+            else:
+                estimator = estimator.fit(X[~self.index_test], y=y[~self.index_test])
+                estimator.score(self.X[self.index_test])
+            
+            # if self.callback:
+            #     self.callback(score)
+
+            return score
+
+        self.study.optimize(objectif, self.n_trials)
+        return self
 
 
 class ObsKFold(KFold):
