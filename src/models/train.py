@@ -34,20 +34,22 @@ def main():
     wandb.init(
         project='winged-bull',
         config = {
-            'batch_size': 8,
+            'batch_size': 8, # try 8 to 64
             'hidden_size': 128, # try 128 to 512
             'num_layers': 2, # try 1 to 4
-            'learning_rate': 1e-4,
-            'dropout': 0.4,
-            'epochs': 100,
-            'optimizer': 'AdamW', 
-            'scheduler_patience': 10,
+            'learning_rate': 1e-3, # try 1e-5 to 1e-3
+            'dropout': 0.4, # try 0.2 to 0.8
+            'epochs': 25,
+            'optimizer': 'RMSprop', # try AdamW and RMSprop
+            'scheduler_patience': 1, # try 0 to 5
             'criterion': 'MSELoss',
-            'val_rate': 0.1
+            'val_rate': 0.2,
+            'stratification': 10, # use 0 to disable the stratification
+            'clustering': False, # try True/False
         }
     )
 
-    train_loader, val_loader, test_loader = get_loaders(wandb.config, num_workers=4)
+    train_loader, val_loader, _ = get_loaders(wandb.config, num_workers=4)
     first_batch = train_loader.dataset[0]
     
     wandb.config['train_size'] = len(train_loader.dataset)
@@ -56,12 +58,15 @@ def main():
     wandb.config['m_num_features'] = first_batch['m_input'].shape[1]
     wandb.config['g_in_features'] = first_batch['g_input'].shape[0]
     wandb.config['c_in_features'] = 2 * (wandb.config['hidden_size'] - 2) + wandb.config['g_in_features']
+    wandb.config['c_out_in_features_1'] = int(2/3 * wandb.config['c_in_features']) # [sqrt(c_in_features) ; 2*c_in_features]
+    wandb.config['c_out_in_features_2'] = int(2/3 * wandb.config['c_in_features']) # [sqrt(c_in_features) ; 2*c_in_features]
 
     model = LSTMModel(wandb.config, device)
     model.to(device)
     
     criterion = nn.MSELoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=wandb.config['learning_rate'])
+    # optimizer = torch.optim.AdamW(model.parameters(), lr=wandb.config['learning_rate'])
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=wandb.config['learning_rate'])
     scheduler = ReduceLROnPlateau(optimizer, patience=wandb.config['scheduler_patience'])
 
     train_config = {

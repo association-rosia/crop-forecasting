@@ -12,6 +12,8 @@ class LSTMModel(nn.Module):
         self.m_num_features = config['m_num_features']
         self.g_in_features = config['g_in_features']
         self.c_in_features = config['c_in_features']
+        self.c_out_in_features_1 = config['c_out_in_features_1']
+        self.c_out_in_features_2 = config['c_out_in_features_2']
         
         self.device = device
         
@@ -22,22 +24,11 @@ class LSTMModel(nn.Module):
         self.cnn = nn.Conv1d(1, 1, kernel_size=3)
         self.bn_cnn = nn.BatchNorm1d(self.hidden_size - 2) # because kernel_size = 3
         
-        self.g_linear_1 = nn.Linear(self.g_in_features, 2*self.g_in_features)
-        self.g_bn_1 = nn.BatchNorm1d(2*self.g_in_features)
-        self.g_linear_2 = nn.Linear(2*self.g_in_features, self.g_in_features)
-        self.g_bn_2 = nn.BatchNorm1d(self.g_in_features)
-        
-        self.c_linear_1 = nn.Linear(self.c_in_features, 4*self.c_in_features)
-        self.c_bn_1 = nn.BatchNorm1d(4*self.c_in_features)
-        self.c_linear_2 = nn.Linear(4*self.c_in_features, 8*self.c_in_features)
-        self.c_bn_2 = nn.BatchNorm1d(8*self.c_in_features)
-        self.c_linear_3 = nn.Linear(8*self.c_in_features, 16*self.c_in_features)
-        self.c_bn_3 = nn.BatchNorm1d(16*self.c_in_features)
-        self.c_linear_4 = nn.Linear(16*self.c_in_features, 8*self.c_in_features)
-        self.c_bn_4 = nn.BatchNorm1d(8*self.c_in_features)
-        self.c_linear_5 = nn.Linear(8*self.c_in_features, 4*self.c_in_features)
-        self.c_bn_5 = nn.BatchNorm1d(4*self.c_in_features)
-        self.c_linear_6 = nn.Linear(4*self.c_in_features, 1)
+        self.c_linear_1 = nn.Linear(self.c_in_features, self.c_out_in_features_1)
+        self.c_bn_1 = nn.BatchNorm1d(self.c_out_in_features_1)
+        self.c_linear_2 = nn.Linear(self.c_out_in_features_1, self.c_out_in_features_2)
+        self.c_bn_2 = nn.BatchNorm1d(self.c_out_in_features_2)
+        self.c_linear_3 = nn.Linear(self.c_out_in_features_2, 1)
         
         self.tanh = nn.Tanh()
         self.relu = nn.ReLU()
@@ -79,14 +70,6 @@ class LSTMModel(nn.Module):
         m_output = self.relu(m_output)
         m_output = self.dropout(m_output)
         
-        # Geo FC
-        g_output = self.g_bn_1(self.g_linear_1(g_input))
-        g_output = self.relu(g_output)
-        g_output = self.dropout(g_output)
-        g_output = self.g_bn_2(self.g_linear_2(g_output))
-        g_output = self.relu(g_output)
-        g_output = self.dropout(g_output)
-        
         # Concatanate inputs
         c_input = torch.cat((s_output, m_output, g_input), 1)
         c_output = self.c_bn_1(self.c_linear_1(c_input))
@@ -95,15 +78,6 @@ class LSTMModel(nn.Module):
         c_output = self.c_bn_2(self.c_linear_2(c_output))
         c_output = self.relu(c_output)
         c_output = self.dropout(c_output)
-        c_output = self.c_bn_3(self.c_linear_3(c_output))
-        c_output = self.relu(c_output)
-        c_output = self.dropout(c_output)
-        c_output = self.c_bn_4(self.c_linear_4(c_output))
-        c_output = self.relu(c_output)
-        c_output = self.dropout(c_output)
-        c_output = self.c_bn_5(self.c_linear_5(c_output))
-        c_output = self.relu(c_output)
-        c_output = self.dropout(c_output)
-        output = self.c_linear_6(c_output)
+        output = self.c_linear_3(c_output)
         
         return output

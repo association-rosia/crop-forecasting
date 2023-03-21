@@ -6,7 +6,6 @@ warnings.filterwarnings("ignore")
 import numpy as np
 import xarray as xr
 
-
 from preprocessing import Smoother, Concatenator
 from datascaler import DatasetScaler
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
