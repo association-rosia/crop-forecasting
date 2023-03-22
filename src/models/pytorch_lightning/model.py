@@ -108,11 +108,12 @@ class LightningModel(pl.LightningModule):
         self.timestamp = int(datetime.now().timestamp())
         self.best_score = 0
         self.val_observations = []
-        self.val_labels = []
         self.val_outputs = []
+        self.val_labels = []
 
     def criterion(self, outputs, labels):
-        return nn.MSELoss(outputs, labels)
+        criterion = nn.MSELoss()
+        return criterion(outputs, labels)
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.lr)
@@ -134,7 +135,7 @@ class LightningModel(pl.LightningModule):
         self.val_observations += val_batch['observation'].squeeze().tolist()
 
         outputs = self.model(inputs)
-        self.val_preds += outputs.squeeze().tolist()
+        self.val_outputs += outputs.squeeze().tolist()
 
         labels = val_batch['target'].float()
         self.val_labels += labels.squeeze().tolist()

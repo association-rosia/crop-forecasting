@@ -1,4 +1,9 @@
+import warnings
+warnings.filterwarnings('ignore')
+
+import pytorch_lightning as pl
 from model import LightningModel
+from data import LightningData
 
 
 def main():
@@ -16,7 +21,30 @@ def main():
         'val_rate': 0.2,
     }
 
+    data = LightningData(config, num_workers=4)
+    data.setup(stage='fit')
+    first_batch = data.train_dataset[0]
+
+    config['train_size'] = len(data.train_dataset)
+    config['val_size'] = len(data.val_dataset)
+    config['s_num_features'] = first_batch['s_input'].shape[1]
+    config['m_num_features'] = first_batch['m_input'].shape[1]
+    config['g_in_features'] = first_batch['g_input'].shape[0]
+
+    config['c_in_features'] = (config['s_hidden_size'] - 2 +
+                               config['m_hidden_size'] - 2 +
+                               config['g_in_features'])
+
+    # try [sqrt(c_in_features) ; 2*c_in_features]
+    config['c_out_in_features_1'] = int(2 / 3 * config['c_in_features'])
+    config['c_out_in_features_2'] = int(2 / 3 * config['c_in_features'])
+
     model = LightningModel(config)
+    trainer = pl.Trainer(logger=True)
+    trainer.fit(model, data)
+
+    # automatically loads the best weights for you
+    # trainer.test(model) # need to override the test_step() method
 
 
 if __name__ == '__main__':

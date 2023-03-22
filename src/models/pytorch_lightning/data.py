@@ -21,7 +21,7 @@ from os.path import join
 
 
 class LightningData(pl.LightningDataModule):
-    def __init__(self, config, num_workers=0):
+    def __init__(self, config, num_workers):
         super(LightningData, self).__init__()
         self.batch_size = config['batch_size']
         self.val_rate = config['val_rate']
@@ -65,11 +65,11 @@ class LightningData(pl.LightningDataModule):
             self.test_dataset = CustomDataset(xdf_test, test=True)
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True)
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=self.num_workers)
 
     def test_dataloader(self):
-        return DataLoader(self.test_dataset, batch_size=self.batch_size)
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, num_workers=self.num_workers)
 
