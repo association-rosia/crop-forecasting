@@ -1,8 +1,10 @@
-from src.constants import S_COLUMNS, M_COLUMNS, G_COLUMNS, FOLDER
+from src.constants import S_COLUMNS, M_COLUMNS, G_COLUMNS, TARGET, FOLDER
 
 import numpy as np
 import pandas as pd
 import xarray as xr
+
+from scipy import stats
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -48,7 +50,7 @@ class DLDataset(Dataset):
         if self.test:
             target = torch.tensor([0.])
         else:
-            target = xdf_id['Rice Yield (kg/ha)'].values
+            target = xdf_id[TARGET].values
 
         target = target.reshape(-1)
 
@@ -66,11 +68,26 @@ class DLDataset(Dataset):
 def get_loaders(config, num_workers):
     batch_size = config['batch_size']
     val_rate = config['val_rate']
-
-    dataset_path = join(ROOT_DIR, 'data', 'processed', FOLDER, 'train_processed.nc')
+    stratification = config['stratification']
+    clustering = config['clustering']
+    
+    dataset_path = join(ROOT_DIR, 'data', 'processed', FOLDER, 'train_enriched.nc')
     xdf_train = xr.open_dataset(dataset_path, engine='scipy')
-    train_idx, val_idx = train_test_split(xdf_train.ts_obs, test_size=val_rate) #, random_state=42)
-
+    
+    if clustering:
+        train_indexes = pd.read_csv(join(ROOT_DIR, 'data', 'processed', 'train_index.csv'), header=None)[0].tolist()
+        xdf_train = xdf_train.sel(ts_obs=train_indexes)
+    
+    if stratification > 0:
+        yields = xdf_train[TARGET][0, :].values
+        yields_distribution = stats.norm(loc=yields.mean(), scale=yields.std())
+        bounds = yields_distribution.cdf([0, 1])
+        bins = np.linspace(*bounds, num=stratification)
+        stratify = np.digitize(yields, bins)
+        train_idx, val_idx = train_test_split(xdf_train.ts_obs, test_size=val_rate, random_state=42, stratify=stratify)
+    else:
+        train_idx, val_idx = train_test_split(xdf_train.ts_obs, test_size=val_rate, random_state=42)
+        
     train_array = xdf_train.sel(ts_obs=train_idx)
     train_shape = train_array['ts_id'].shape
     train_array['ts_id'].values = np.arange(np.prod(train_shape)).reshape(train_shape)
@@ -83,7 +100,7 @@ def get_loaders(config, num_workers):
     val_dataset = DLDataset(val_array)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
     
-    dataset_path = join(ROOT_DIR, 'data', 'processed', FOLDER, 'test_processed.nc')
+    dataset_path = join(ROOT_DIR, 'data', 'processed', FOLDER, 'test_enriched.nc')
     xdf_test = xr.open_dataset(dataset_path, engine='scipy')
     test_dataset = DLDataset(xdf_test, test=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, num_workers=num_workers)

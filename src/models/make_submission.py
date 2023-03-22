@@ -12,10 +12,17 @@ sys.path.insert(1, parent)
 
 from dataloader import get_loaders
 
-from src.constants import FOLDER, TARGET
+from src.constants import FOLDER, TARGET, TARGET_TEST
 
 from utils import ROOT_DIR
 from os.path import join
+
+MODEL = 'hearty-sun-321.pt'
+
+
+def rounded_yield(x, crop_yields):
+    diffs = [abs(x - crop_yield) for crop_yield in crop_yields]
+    return crop_yields[diffs.index(min(diffs))]
 
 
 class Evaluator():
@@ -38,9 +45,13 @@ class Evaluator():
         train_df = pd.read_csv(train_path)
         scaler.fit(train_df[[TARGET]])
         
-        test_df['Predicted Rice Yield (kg/ha)'] = scaler.inverse_transform(df[['preds']])
-        test_df['Predicted Rice Yield (kg/ha)'] = test_df['Predicted Rice Yield (kg/ha)'].apply(lambda x: int(x/10)*10)
-        test_df.to_csv('submission.csv')
+        test_df[TARGET_TEST] = scaler.inverse_transform(df[['preds']])
+        
+        crop_yields = train_df[TARGET].unique().tolist()
+        test_df[TARGET_TEST] = test_df[TARGET_TEST].apply(lambda x: rounded_yield(x, crop_yields))
+        test_df.to_csv('hearty-sun-321.csv', index=False)
+        
+        return True
         
     def evaluate(self, model):
         observations = []
@@ -65,12 +76,12 @@ class Evaluator():
 if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
-    config = {'batch_size': 8, 'val_rate': 0.2}
+    config = {'batch_size': 8, 'val_rate': 0.2, 'stratification': False, 'clustering': False}
     _, _, test_loader = get_loaders(config, num_workers=4)
     
     evaluator = Evaluator(test_loader, device)
     
-    model_path = join(ROOT_DIR, 'models', '1679248975_model_0-62500.pt')
+    model_path = join(ROOT_DIR, 'models', MODEL)
     model = torch.load(model_path)
     evaluator.evaluate(model)
     
