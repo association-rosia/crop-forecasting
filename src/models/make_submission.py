@@ -17,12 +17,23 @@ from src.constants import FOLDER, TARGET, TARGET_TEST
 from utils import ROOT_DIR
 from os.path import join
 
-MODEL = 'hearty-sun-321.pt'
+MODEL = '1679500251_model_0-64749.pt'
 
 
 def rounded_yield(x, crop_yields):
     diffs = [abs(x - crop_yield) for crop_yield in crop_yields]
     return crop_yields[diffs.index(min(diffs))]
+
+
+def get_device():
+    if torch.cuda.is_available():
+        device = 'cuda'
+    elif torch.backends.mps.is_available():
+        device = 'mps'
+    else:
+        raise Exception("None accelerator available")
+
+    return device
 
 
 class Evaluator():
@@ -47,17 +58,15 @@ class Evaluator():
         
         test_df[TARGET_TEST] = scaler.inverse_transform(df[['preds']])
         
-        crop_yields = train_df[TARGET].unique().tolist()
-        test_df[TARGET_TEST] = test_df[TARGET_TEST].apply(lambda x: rounded_yield(x, crop_yields))
-        test_df.to_csv('hearty-sun-321.csv', index=False)
+        #crop_yields = train_df[TARGET].unique().tolist()
+        #test_df[TARGET_TEST] = test_df[TARGET_TEST].apply(lambda x: rounded_yield(x, crop_yields))
+        test_df.to_csv('submission.csv', index=False)
         
         return True
         
     def evaluate(self, model):
         observations = []
         test_preds = []
-        
-        model.eval()
 
         pbar = tqdm(self.test_loader, leave=False)
         for i, data in enumerate(pbar):
@@ -74,7 +83,7 @@ class Evaluator():
         
         
 if __name__ == '__main__':
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = get_device()
     
     config = {'batch_size': 8, 'val_rate': 0.2, 'stratification': False, 'clustering': False}
     _, _, test_loader = get_loaders(config, num_workers=4)
@@ -82,6 +91,6 @@ if __name__ == '__main__':
     evaluator = Evaluator(test_loader, device)
     
     model_path = join(ROOT_DIR, 'models', MODEL)
-    model = torch.load(model_path)
+    model = torch.load(model_path).to(device)
     evaluator.evaluate(model)
     
