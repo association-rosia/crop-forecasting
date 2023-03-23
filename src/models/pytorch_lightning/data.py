@@ -21,10 +21,10 @@ from os.path import join
 
 
 class LightningData(pl.LightningDataModule):
-    def __init__(self, config, num_workers):
+    def __init__(self, batch_size, val_rate, num_workers):
         super(LightningData, self).__init__()
-        self.batch_size = config['batch_size']
-        self.val_rate = config['val_rate']
+        self.batch_size = batch_size
+        self.val_rate = val_rate
         self.num_workers = num_workers
         self.train_dataset = None
         self.val_dataset = None

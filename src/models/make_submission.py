@@ -17,7 +17,7 @@ from src.constants import FOLDER, TARGET, TARGET_TEST
 from utils import ROOT_DIR
 from os.path import join
 
-MODEL = '1679500251_model_0-64749.pt'
+MODEL = '1679567667_model_0-69317.pt'
 
 
 def rounded_yield(x, crop_yields):

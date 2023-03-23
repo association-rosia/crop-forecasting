@@ -28,11 +28,11 @@ def main():
             's_num_layers': 2,  # try 1 to 4
             'm_hidden_size': 128,  # try 128 to 512
             'm_num_layers': 2,  # try 1 to 4
-            'learning_rate': 1e-4,  # try 1e-5 to 1e-3
+            'learning_rate': 1e-5,  # try 1e-5 to 1e-3
             'dropout': 0.5,  # try 0.2 to 0.8
-            'epochs': 25,
+            'epochs': 50,
             'optimizer': 'AdamW',  # try AdamW and RMSprop
-            'scheduler_patience': 5,  # try 0 to 5
+            'scheduler_patience': 3,  # try 0 to 5
             'criterion': 'MSELoss',
             'val_rate': 0.2,
             'stratification': True,  # use 0 to disable the stratification
