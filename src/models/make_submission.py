@@ -2,8 +2,6 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
-import xarray as xr
-
 from sklearn.preprocessing import MinMaxScaler
 
 import os, sys
@@ -12,12 +10,12 @@ sys.path.insert(1, parent)
 
 from dataloader import get_loaders
 
-from src.constants import FOLDER, TARGET, TARGET_TEST
+from src.constants import TARGET, TARGET_TEST
 
 from utils import ROOT_DIR
 from os.path import join
 
-MODEL = '1679567667_model_0-69317.pt'
+MODEL = 'toasty-sky-343.pt'
 
 
 def rounded_yield(x, crop_yields):
@@ -58,8 +56,8 @@ class Evaluator():
         
         test_df[TARGET_TEST] = scaler.inverse_transform(df[['preds']])
         
-        #crop_yields = train_df[TARGET].unique().tolist()
-        #test_df[TARGET_TEST] = test_df[TARGET_TEST].apply(lambda x: rounded_yield(x, crop_yields))
+        crop_yields = train_df[TARGET].unique().tolist()
+        test_df[TARGET_TEST] = test_df[TARGET_TEST].apply(lambda x: rounded_yield(x, crop_yields))
         test_df.to_csv('submission.csv', index=False)
         
         return True

@@ -36,32 +36,33 @@ class CustomDataset(Dataset):
         xdf_id = self.data.where(self.data['ts_id'] == idx, drop=True)
 
         g_arr = xdf_id[G_COLUMNS].to_array().values
-        g_arr = g_arr.reshape(-1).astype(np.float32)
+        g_arr = g_arr.reshape(-1)
         g_input = torch.tensor(g_arr)
 
         s_arr = xdf_id[S_COLUMNS].to_array().values
-        s_arr = s_arr.reshape((len(S_COLUMNS), self.s_times)).T.astype(np.float32)
+        s_arr = s_arr.reshape((len(S_COLUMNS), self.s_times)).T
         s_input = torch.tensor(s_arr)
 
         all_dates = pd.date_range(xdf_id['time'].min().values, xdf_id['time'].max().values, freq='D')
         all_dates = all_dates[-self.m_times:]
         g_arr = xdf_id.sel(datetime=all_dates, name=xdf_id['District'])[M_COLUMNS].to_array().values
-        g_arr = g_arr.reshape((len(M_COLUMNS), self.m_times)).T.astype(np.float32)
+        g_arr = g_arr.reshape((len(M_COLUMNS), self.m_times)).T
         m_input = torch.tensor(g_arr)
 
         if self.test:
             target = torch.tensor([0.])
         else:
-            target = xdf_id[TARGET].values
+            target = torch.tensor(xdf_id[TARGET].values)
 
         target = target.reshape(-1)
+        observation = torch.tensor(xdf_id['ts_obs'].values)
 
-        item: dict = {
-            'observation': xdf_id['ts_obs'].values,
-            's_input': s_input,
-            'm_input': m_input,
-            'g_input': g_input,
-            'target': target
+        item = {
+            'observation': observation.to(torch.float32),
+            's_input': s_input.to(torch.float32),
+            'm_input': m_input.to(torch.float32),
+            'g_input': g_input.to(torch.float32),
+            'target': target.to(torch.float32)
         }
 
         return item
