@@ -7,10 +7,12 @@ from data import LightningData
 
 from math import sqrt
 
-import psutil
 import torch
 import optuna
 import wandb
+
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 STUDY_NAME = 'crop-forecasting'
 
