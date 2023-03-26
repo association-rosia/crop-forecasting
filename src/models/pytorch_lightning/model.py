@@ -1,5 +1,4 @@
 import numpy as np
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -62,9 +61,6 @@ class CustomModel(nn.Module):
         g_input = x['g_input']
 
         # Spectral LSTM
-        # s_h0 = torch.zeros(self.s_num_layers, s_input.size(0), self.s_hidden_size).requires_grad_().to('mps')
-        # s_c0 = torch.zeros(self.s_num_layers, s_input.size(0), self.s_hidden_size).requires_grad_().to('mps')
-        # s_output, _ = self.s_lstm(s_input, (s_h0, s_c0))
         s_output, _ = self.s_lstm(s_input)
         s_output = self.s_bn_lstm(s_output[:, -1, :])
         s_output = self.tanh(s_output)
@@ -78,9 +74,6 @@ class CustomModel(nn.Module):
         s_output = self.dropout(s_output)
 
         # Meteorological LSTM
-        # m_h0 = torch.zeros(self.m_num_layers, m_input.size(0), self.m_hidden_size).requires_grad_().to('mps')
-        # m_c0 = torch.zeros(self.m_num_layers, m_input.size(0), self.m_hidden_size).requires_grad_().to('mps')
-        # m_output, _ = self.m_lstm(m_input, (m_h0, m_c0))
         m_output, _ = self.m_lstm(m_input)
         m_output = self.m_bn_lstm(m_output[:, -1, :])
         m_output = self.tanh(m_output)
@@ -107,22 +100,24 @@ class CustomModel(nn.Module):
 
 
 class LightningModel(pl.LightningModule):
-    def __init__(self, config, trial):
+    def __init__(self, config, trial, data):
         super().__init__()
         self.model = CustomModel(config)
         self.trial = trial
         self.learning_rate = config['learning_rate']
         self.optimizer = config['optimizer']
+        self.train_size = len(data.train_loader)
+        self.val_size = len(data.val_loader)
+        
+        self.criterion = nn.MSELoss()
         self.keys_input = ['s_input', 'm_input', 'g_input']
         self.timestamp = int(datetime.now().timestamp())
-        self.best_score = 0
+        self.train_loss = 0.
+        self.val_loss = 0.
+        self.best_score = 0.
         self.val_observations = []
         self.val_outputs = []
         self.val_labels = []
-
-    def criterion(self, outputs, labels):
-        criterion = nn.MSELoss()
-        return criterion(outputs, labels)
 
     def configure_optimizers(self):
         optimizer = getattr(optim, self.optimizer)(self.model.parameters(), lr=self.learning_rate)
@@ -130,28 +125,26 @@ class LightningModel(pl.LightningModule):
 
     def training_step(self, train_batch, batch_idx):
         inputs = {key: train_batch[key] for key in self.keys_input}
-
         outputs = self.model(inputs)
-
         labels = train_batch['target'].float()
-
         loss = self.criterion(outputs, labels)
-        wandb.log({'train_loss': loss.item()})
+        self.train_loss += loss.detach()
         return loss
+    
+    def on_train_epoch_end(self):
+        self.train_loss /= self.train_size
+        wandb.log({'train_loss': self.train_loss})
+        self.train_loss = 0.
 
     def validation_step(self, val_batch, batch_idx):
         inputs = {key: val_batch[key] for key in self.keys_input}
         self.val_observations += val_batch['observation'].squeeze().tolist()
-
         outputs = self.model(inputs)
-
         self.val_outputs += outputs.squeeze().tolist()
-
         labels = val_batch['target'].float()
         self.val_labels += labels.squeeze().tolist()
-
         loss = self.criterion(outputs, labels)
-        wandb.log({'val_loss': loss.item()})
+        self.val_loss += loss.detach()
         return loss
 
     def compute_r2_scores(self):
@@ -162,7 +155,6 @@ class LightningModel(pl.LightningModule):
         r2 = np.float32(r2_score(df.labels, df.outputs))
         df = df.groupby(['observations']).mean()
         agg_r2 = np.float32(r2_score(df.labels, df.outputs))
-
         return r2, agg_r2
 
     def save_model(self, score):
@@ -185,17 +177,19 @@ class LightningModel(pl.LightningModule):
         wandb.log({'best_score': self.best_score})
 
     def on_validation_epoch_end(self):
+        self.val_loss /= self.val_size
         val_r2_score, val_mean_r2_score = self.compute_r2_scores()
         self.save_model(val_mean_r2_score)
 
-        wandb.log({'val_r2_score': val_r2_score, 'val_mean_r2_score': val_mean_r2_score})
-
-        self.val_observations.clear()
-        self.val_outputs.clear()
-        self.val_labels.clear()
-        
-        print(f'Val r2: {val_r2_score:.5f} - Val agg r2: {val_mean_r2_score:.5f} - Best r2: {self.best_score:.5f} \n')
+        wandb.log({'val_loss': self.val_loss, 
+                   'val_r2_score': val_r2_score, 
+                   'val_mean_r2_score': val_mean_r2_score})
 
         self.trial.report(val_mean_r2_score, self.current_epoch)
         if self.trial.should_prune():
             raise optuna.TrialPruned()
+            
+        self.val_loss = 0.
+        self.val_observations.clear()
+        self.val_outputs.clear()
+        self.val_labels.clear()

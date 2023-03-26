@@ -28,7 +28,8 @@ class LightningData(pl.LightningDataModule):
         self.num_workers = num_workers
         self.train_dataset = None
         self.val_dataset = None
-        self.test_dataset = None
+        self.train_loader = None
+        self.val_loader = None
 
     def create_train_val_idx(self, xdf_train):
         yields = xdf_train[TARGET][0, :].values
@@ -53,23 +54,22 @@ class LightningData(pl.LightningDataModule):
             train_shape = train_array['ts_id'].shape
             train_array['ts_id'].values = np.arange(np.prod(train_shape)).reshape(train_shape)
             self.train_dataset = CustomDataset(train_array)
+            self.train_loader = DataLoader(self.train_dataset, 
+                                           batch_size=self.batch_size, 
+                                           num_workers=self.num_workers, 
+                                           shuffle=True)
 
             val_array = xdf_train.sel(ts_obs=val_idx)
             val_shape = val_array['ts_id'].shape
             val_array['ts_id'].values = np.arange(np.prod(val_shape)).reshape(val_shape)
             self.val_dataset = CustomDataset(val_array)
-
-        if stage == 'test':
-            dataset_path = join(ROOT_DIR, 'data', 'processed', FOLDER, 'test_enriched.nc')
-            xdf_test = xr.open_dataset(dataset_path, engine='scipy')
-            self.test_dataset = CustomDataset(xdf_test, test=True)
+            self.val_loader = DataLoader(self.val_dataset, 
+                                         batch_size=self.batch_size, 
+                                         num_workers=self.num_workers)
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True)
+        return self.train_loader
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=self.num_workers)
-
-    def test_dataloader(self):
-        return DataLoader(self.test_dataset, batch_size=self.batch_size, num_workers=self.num_workers)
+        return self.val_loader
 
