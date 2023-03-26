@@ -33,9 +33,9 @@ def init_optuna(trial, batch_size=16):
     data, first_batch = get_data(batch_size=batch_size, val_rate=0.2)
 
     s_hidden_size = trial.suggest_int('s_hidden_size', 64, 512)
-    s_num_layers = trial.suggest_int('s_num_layers', 1, 3)
+    s_num_layers = trial.suggest_int('s_num_layers', 1, 2)
     m_hidden_size = trial.suggest_int('m_hidden_size', 64, 512)
-    m_num_layers = trial.suggest_int('m_num_layers', 1, 4)
+    m_num_layers = trial.suggest_int('m_num_layers', 1, 2)
     learning_rate = trial.suggest_uniform('learning_rate', 1e-5, 1e-2)
     dropout = trial.suggest_uniform('dropout ', 0.5, 0.8)
     optimizer = trial.suggest_categorical('optimizer ', choices=['AdamW', 'RMSprop'])
