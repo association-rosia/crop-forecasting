@@ -29,14 +29,14 @@ def main():
     study.optimize(objective, n_trials=100)
 
 
-def init_optuna(trial, batch_size=32):
+def init_optuna(trial, batch_size=16):
     data, first_batch = get_data(batch_size=batch_size, val_rate=0.2)
 
-    s_hidden_size = trial.suggest_int('s_hidden_size', 128, 256)
-    s_num_layers = trial.suggest_int('s_num_layers', 1, 4)
-    m_hidden_size = trial.suggest_int('m_hidden_size', 128, 256)
+    s_hidden_size = trial.suggest_int('s_hidden_size', 64, 512)
+    s_num_layers = trial.suggest_int('s_num_layers', 1, 3)
+    m_hidden_size = trial.suggest_int('m_hidden_size', 64, 512)
     m_num_layers = trial.suggest_int('m_num_layers', 1, 4)
-    learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-2)
+    learning_rate = trial.suggest_uniform('learning_rate', 1e-5, 1e-2)
     dropout = trial.suggest_uniform('dropout ', 0.5, 0.8)
     optimizer = trial.suggest_categorical('optimizer ', choices=['AdamW', 'RMSprop'])
     c_in_features = s_hidden_size - 2 + m_hidden_size - 2 + first_batch['g_input'].shape[0]
@@ -80,17 +80,17 @@ def objective(trial):
     trainer = pl.Trainer(
         logger=False,
         enable_checkpointing=False,
+        num_sanity_val_steps=0,
         max_epochs=config['epochs'],
         accelerator='auto',
     )
 
     trainer.fit(model, data)
 
-    return trainer.callback_metrics['val_mean_r2_score'].item()
+    return trainer.callback_metrics['best_score'].item()
 
 
 def get_data(batch_size, val_rate):
-    # num_workers = psutil.cpu_count(logical=False)
     data = LightningData(batch_size, val_rate, num_workers=4)
     data.setup(stage='fit')
     first_batch = data.train_dataset[0]

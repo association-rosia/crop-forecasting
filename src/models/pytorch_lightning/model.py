@@ -154,16 +154,16 @@ class LightningModel(pl.LightningModule):
         wandb.log({'val_loss': loss.item()})
         return loss
 
-    def r2_scores(self):
+    def compute_r2_scores(self):
         df = pd.DataFrame()
         df['observations'] = self.val_observations
         df['outputs'] = self.val_outputs
         df['labels'] = self.val_labels
-        full_r2_score = np.float32(r2_score(df.labels, df.outputs))
+        r2 = np.float32(r2_score(df.labels, df.outputs))
         df = df.groupby(['observations']).mean()
-        mean_r2_score = np.float32(r2_score(df.labels, df.outputs))
+        agg_r2 = np.float32(r2_score(df.labels, df.outputs))
 
-        return full_r2_score, mean_r2_score
+        return r2, agg_r2
 
     def save_model(self, score):
         save_folder = os.path.join(ROOT_DIR, 'models')
@@ -181,10 +181,11 @@ class LightningModel(pl.LightningModule):
             save_path = os.path.join(save_folder, file_name)
             torch.save(self.model, save_path)
 
+        self.log('best_score', self.best_score) # for objective return function
         wandb.log({'best_score': self.best_score})
 
     def on_validation_epoch_end(self):
-        val_r2_score, val_mean_r2_score = self.r2_scores()
+        val_r2_score, val_mean_r2_score = self.compute_r2_scores()
         self.save_model(val_mean_r2_score)
 
         wandb.log({'val_r2_score': val_r2_score, 'val_mean_r2_score': val_mean_r2_score})
@@ -192,6 +193,8 @@ class LightningModel(pl.LightningModule):
         self.val_observations.clear()
         self.val_outputs.clear()
         self.val_labels.clear()
+        
+        print(f'Val r2: {val_r2_score:.5f} - Val agg r2: {val_mean_r2_score:.5f} - Best r2: {self.best_score:.5f} \n')
 
         self.trial.report(val_mean_r2_score, self.current_epoch)
         if self.trial.should_prune():
