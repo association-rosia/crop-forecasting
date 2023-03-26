@@ -1,0 +1,28 @@
+name: crop-forecasting-env
+dependencies:
+  - python=3.10.*
+  - pip
+  - pandas
+  - ipykernel
+  - netCDF4
+  - matplotlib
+  - Jinja2
+  - python-dotenv
+  - seaborn
+  - statsmodels
+  - scikit-learn
+  - rich
+  - ipywidgets
+  - pytorch-lightning=2.0.0
+  - pip:
+    - xarray-spatial
+    - odc-stac
+    - rioxarray
+    - optuna
+    - pystac
+    - ipyleaflet
+    - stackstac
+    - pystac-client
+    - planetary-computer
+    - torch
+    - wandb
