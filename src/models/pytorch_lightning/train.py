@@ -70,6 +70,7 @@ def init_optuna(trial, batch_size=16):
 
 
 def objective(trial):
+    torch.cuda.empty_cache()
     trial, config, data = init_optuna(trial)
     model = LightningModel(config, trial, data)
 
