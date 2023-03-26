@@ -55,7 +55,6 @@ def init_optuna(trial, batch_size=16):
         's_num_features': first_batch['s_input'].shape[1],
         'm_num_features': first_batch['m_input'].shape[1],
         'g_in_features': first_batch['g_input'].shape[0],
-        'c_in_features': c_in_features,
         'c_out_in_features_1': c_out_in_features_1,
         'c_out_in_features_2': c_out_in_features_2,
         'trial.number': trial.number
