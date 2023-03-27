@@ -24,7 +24,7 @@ def main():
                                 direction='maximize',
                                 pruner=pruner)
 
-    study.optimize(objective, n_trials=-1)
+    study.optimize(objective, n_trials=None)
 
 
 def init_optuna(trial: optuna.Trial):
