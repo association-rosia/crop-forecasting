@@ -28,8 +28,8 @@ class LightningData(pl.LightningDataModule):
         self.num_workers = num_workers
         self.train_dataset = None
         self.val_dataset = None
-        self.train_loader = None
-        self.val_loader = None
+        self.train_size = None
+        self.val_size = None
 
     def create_train_val_idx(self, xdf_train):
         yields = xdf_train[TARGET][0, :].values
@@ -54,22 +54,21 @@ class LightningData(pl.LightningDataModule):
             train_shape = train_array['ts_id'].shape
             train_array['ts_id'].values = np.arange(np.prod(train_shape)).reshape(train_shape)
             self.train_dataset = CustomDataset(train_array)
-            self.train_loader = DataLoader(self.train_dataset, 
-                                           batch_size=self.batch_size, 
-                                           num_workers=self.num_workers, 
-                                           shuffle=True)
+            self.train_size = len(self.train_dataset)
 
             val_array = xdf_train.sel(ts_obs=val_idx)
             val_shape = val_array['ts_id'].shape
             val_array['ts_id'].values = np.arange(np.prod(val_shape)).reshape(val_shape)
             self.val_dataset = CustomDataset(val_array)
-            self.val_loader = DataLoader(self.val_dataset, 
-                                         batch_size=self.batch_size, 
-                                         num_workers=self.num_workers)
+            self.val_size = len(self.val_dataset)
 
     def train_dataloader(self):
-        return self.train_loader
+        return DataLoader(self.train_dataset,
+                          batch_size=self.batch_size,
+                          num_workers=self.num_workers,
+                          shuffle=True)
 
     def val_dataloader(self):
-        return self.val_loader
-
+        return DataLoader(self.val_dataset,
+                          batch_size=self.batch_size,
+                          num_workers=self.num_workers)

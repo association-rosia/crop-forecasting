@@ -1,20 +1,21 @@
 import warnings
+
 warnings.filterwarnings('ignore')
 
 import pytorch_lightning as pl
 from model import LightningModel
 from data import LightningData
 
-from math import sqrt
+from math import sqrt, ceil
 
 import torch
 import optuna
 import wandb
 
-import torch.multiprocessing
-torch.multiprocessing.set_sharing_strategy('file_system')
-
 STUDY_NAME = 'crop-forecasting'
+BATCH_SIZE = 16
+VAL_RATE = 0.2
+
 
 def main():
     pruner = optuna.pruners.MedianPruner()
@@ -28,8 +29,8 @@ def main():
     study.optimize(objective, n_trials=100)
 
 
-def init_optuna(trial, batch_size=16):
-    data, first_batch = get_data(batch_size=batch_size, val_rate=0.2)
+def init_optuna(trial):
+    data, first_batch = get_data()
     s_hidden_size = trial.suggest_int('s_hidden_size', 64, 256)
     s_num_layers = trial.suggest_int('s_num_layers', 1, 2)
     m_hidden_size = trial.suggest_int('m_hidden_size', 64, 256)
@@ -42,7 +43,7 @@ def init_optuna(trial, batch_size=16):
     c_out_in_features_2 = trial.suggest_int('c_out_in_features_2', int(sqrt(c_in_features)), 2 * c_in_features)
 
     config = {
-        'batch_size': batch_size,
+        'batch_size': BATCH_SIZE,
         's_hidden_size': s_hidden_size,
         's_num_layers': s_num_layers,
         'm_hidden_size': m_hidden_size,
@@ -58,9 +59,11 @@ def init_optuna(trial, batch_size=16):
         'c_in_features': c_in_features,
         'c_out_in_features_1': c_out_in_features_1,
         'c_out_in_features_2': c_out_in_features_2,
+        'train_size': ceil(data.train_size / BATCH_SIZE),
+        'val_size': ceil(data.val_size / BATCH_SIZE),
         'trial.number': trial.number
     }
-    
+
     wandb.init(
         project='winged-bull',
         config=config,
@@ -72,17 +75,15 @@ def init_optuna(trial, batch_size=16):
 
 
 def objective(trial):
-    torch.cuda.empty_cache()
     trial, config, data = init_optuna(trial)
-    model = LightningModel(config, trial, data)
+    model = LightningModel(config, trial)
 
     trainer = pl.Trainer(
         logger=False,
         enable_checkpointing=False,
         num_sanity_val_steps=0,
         max_epochs=config['epochs'],
-        accelerator='auto',
-        precision=16
+        accelerator='auto'
     )
 
     trainer.fit(model, data)
@@ -90,13 +91,15 @@ def objective(trial):
     return trainer.callback_metrics['best_score'].detach()
 
 
-def get_data(batch_size, val_rate):
-    data = LightningData(batch_size, val_rate, num_workers=4) # 4 * num_GPU
+def get_data():
+    data = LightningData(BATCH_SIZE, VAL_RATE, num_workers=4)  # 4 * num_GPU
     data.setup(stage='fit')
     first_batch = data.train_dataset[0]
+    print('GET DATA...')
 
     return data, first_batch
 
 
 if __name__ == '__main__':
+    torch.cuda.empty_cache()
     main()

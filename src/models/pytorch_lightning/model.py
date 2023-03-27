@@ -11,6 +11,7 @@ import wandb
 
 import os
 import sys
+
 parent = os.path.abspath('.')
 sys.path.insert(1, parent)
 from utils import ROOT_DIR
@@ -100,15 +101,14 @@ class CustomModel(nn.Module):
 
 
 class LightningModel(pl.LightningModule):
-    def __init__(self, config, trial, data):
+    def __init__(self, config, trial):
         super().__init__()
         self.model = CustomModel(config)
         self.trial = trial
         self.learning_rate = config['learning_rate']
         self.optimizer = config['optimizer']
-        self.train_size = len(data.train_loader)
-        self.val_size = len(data.val_loader)
-        
+        self.train_size = config['train_size']
+        self.val_size = config['val_size']
         self.criterion = nn.MSELoss()
         self.keys_input = ['s_input', 'm_input', 'g_input']
         self.timestamp = int(datetime.now().timestamp())
@@ -130,10 +130,10 @@ class LightningModel(pl.LightningModule):
         loss = self.criterion(outputs, labels)
         self.train_loss += loss.detach()
         return loss
-    
+
     def on_train_epoch_end(self):
         self.train_loss /= self.train_size
-        wandb.log({'train_loss': self.train_loss})
+        wandb.log({'train_loss': self.train_loss}, step=self.current_epoch)
         self.train_loss = 0.
 
     def validation_step(self, val_batch, batch_idx):
@@ -173,22 +173,22 @@ class LightningModel(pl.LightningModule):
             save_path = os.path.join(save_folder, file_name)
             torch.save(self.model, save_path)
 
-        self.log('best_score', self.best_score) # for objective return function
-        wandb.log({'best_score': self.best_score})
+        self.log('best_score', self.best_score.detach())  # for objective return function
+        wandb.log({'best_score': self.best_score.detach()}, step=self.current_epoch)
 
     def on_validation_epoch_end(self):
         self.val_loss /= self.val_size
         val_r2_score, val_mean_r2_score = self.compute_r2_scores()
         self.save_model(val_mean_r2_score)
 
-        wandb.log({'val_loss': self.val_loss, 
-                   'val_r2_score': val_r2_score, 
-                   'val_mean_r2_score': val_mean_r2_score})
+        wandb.log({'val_loss': self.val_loss,
+                   'val_r2_score': val_r2_score.detach(),
+                   'val_mean_r2_score': val_mean_r2_score.detach()}, step=self.current_epoch)
 
         self.trial.report(val_mean_r2_score, self.current_epoch)
         if self.trial.should_prune():
             raise optuna.TrialPruned()
-            
+
         self.val_loss = 0.
         self.val_observations.clear()
         self.val_outputs.clear()
