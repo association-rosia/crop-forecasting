@@ -1,5 +1,4 @@
 import warnings
-
 warnings.filterwarnings('ignore')
 
 import pytorch_lightning as pl
@@ -13,7 +12,6 @@ import optuna
 import wandb
 
 STUDY_NAME = 'crop-forecasting'
-BATCH_SIZE = 16
 VAL_RATE = 0.2
 
 
@@ -26,11 +24,12 @@ def main():
                                 direction='maximize',
                                 pruner=pruner)
 
-    study.optimize(objective, n_trials=100)
+    study.optimize(objective, n_trials=-1)
 
 
-def init_optuna(trial):
-    train_dataloader, val_dataloader, first_batch = get_data()
+def init_optuna(trial: optuna.Trial):
+    batch_size = trial.suggest_categorical('batch_size', [8, 16, 32, 64])
+    train_dataloader, val_dataloader, first_batch = get_data(batch_size)
     s_hidden_size = trial.suggest_int('s_hidden_size', 64, 256)
     s_num_layers = trial.suggest_int('s_num_layers', 1, 2)
     m_hidden_size = trial.suggest_int('m_hidden_size', 64, 256)
@@ -43,7 +42,7 @@ def init_optuna(trial):
     c_out_in_features_2 = trial.suggest_int('c_out_in_features_2', int(sqrt(c_in_features)), 2 * c_in_features)
 
     config = {
-        'batch_size': BATCH_SIZE,
+        'batch_size': batch_size,
         's_hidden_size': s_hidden_size,
         's_num_layers': s_num_layers,
         'm_hidden_size': m_hidden_size,
@@ -74,7 +73,7 @@ def init_optuna(trial):
     return trial, config, train_dataloader, val_dataloader
 
 
-def objective(trial):
+def objective(trial: optuna.Trial):
     torch.cuda.empty_cache()
     trial, config, train_dataloader, val_dataloader = init_optuna(trial)
     model = LightningModel(config, trial)
@@ -85,7 +84,6 @@ def objective(trial):
         num_sanity_val_steps=0,
         max_epochs=config['epochs'],
         accelerator='auto',
-        precision=16
     )
 
     trainer.fit(model=model,
@@ -95,8 +93,8 @@ def objective(trial):
     return trainer.callback_metrics['best_score'].detach()
 
 
-def get_data():
-    train_dataloader, val_dataloader = get_dataloaders(BATCH_SIZE, VAL_RATE)  # 4 * num_GPU
+def get_data(batch_size):
+    train_dataloader, val_dataloader = get_dataloaders(batch_size, VAL_RATE)  # 4 * num_GPU
     first_batch = train_dataloader.dataset[0]
 
     return train_dataloader, val_dataloader, first_batch
