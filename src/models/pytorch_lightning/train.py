@@ -98,11 +98,9 @@ def objective(trial):
 def get_data():
     train_dataloader, val_dataloader = get_dataloaders(BATCH_SIZE, VAL_RATE)  # 4 * num_GPU
     first_batch = train_dataloader.dataset[0]
-    print('GET DATA...')
 
     return train_dataloader, val_dataloader, first_batch
 
 
 if __name__ == '__main__':
-    torch.cuda.empty_cache()
     main()

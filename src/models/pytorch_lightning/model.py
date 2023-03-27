@@ -190,6 +190,6 @@ class LightningModel(pl.LightningModule):
             raise optuna.TrialPruned()
 
         self.val_loss = 0.
-        self.val_observations.clear()
-        self.val_outputs.clear()
-        self.val_labels.clear()
+        self.val_observations = []
+        self.val_outputs = []
+        self.val_labels = []
