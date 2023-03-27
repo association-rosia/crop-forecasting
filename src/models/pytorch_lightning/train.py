@@ -75,6 +75,7 @@ def init_optuna(trial):
 
 
 def objective(trial):
+    torch.cuda.empty_cache()
     trial, config, train_dataloader, val_dataloader = init_optuna(trial)
     model = LightningModel(config, trial)
 
