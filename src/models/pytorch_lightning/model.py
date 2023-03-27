@@ -138,11 +138,11 @@ class LightningModel(pl.LightningModule):
 
     def validation_step(self, val_batch, batch_idx):
         inputs = {key: val_batch[key] for key in self.keys_input}
-        self.val_observations += val_batch['observation'].squeeze().tolist()
+        self.val_observations += val_batch['observation'].squeeze().detach().tolist()
         outputs = self.model(inputs)
-        self.val_outputs += outputs.squeeze().tolist()
+        self.val_outputs += outputs.squeeze().detach().tolist()
         labels = val_batch['target'].float()
-        self.val_labels += labels.squeeze().tolist()
+        self.val_labels += labels.squeeze().detach().tolist()
         loss = self.criterion(outputs, labels)
         self.val_loss += loss.detach()
         return loss
