@@ -101,10 +101,11 @@ class CustomModel(nn.Module):
 
 
 class LightningModel(pl.LightningModule):
-    def __init__(self, config, trial):
+    def __init__(self, config, trial, run):
         super().__init__()
         self.model = CustomModel(config)
         self.trial = trial
+        self.run = run
         self.learning_rate = config['learning_rate']
         self.optimizer = config['optimizer']
         self.train_size = config['train_size']
@@ -133,7 +134,7 @@ class LightningModel(pl.LightningModule):
 
     def on_train_epoch_end(self):
         self.train_loss /= self.train_size
-        wandb.log({'train_loss': self.train_loss}, step=self.current_epoch)
+        self.run.log({'train_loss': self.train_loss}, step=self.current_epoch)
         self.train_loss = 0.
 
     def validation_step(self, val_batch, batch_idx):
@@ -174,16 +175,16 @@ class LightningModel(pl.LightningModule):
             torch.save(self.model, save_path)
 
         self.log('best_score', self.best_score)  # for objective return function
-        wandb.log({'best_score': self.best_score}, step=self.current_epoch)
+        self.run.log({'best_score': self.best_score}, step=self.current_epoch)
 
     def on_validation_epoch_end(self):
         self.val_loss /= self.val_size
         val_r2_score, val_mean_r2_score = self.compute_r2_scores()
         self.save_model(val_mean_r2_score)
 
-        wandb.log({'val_loss': self.val_loss,
-                   'val_r2_score': val_r2_score,
-                   'val_mean_r2_score': val_mean_r2_score}, step=self.current_epoch)
+        self.run.log({'val_loss': self.val_loss,
+                      'val_r2_score': val_r2_score,
+                      'val_mean_r2_score': val_mean_r2_score}, step=self.current_epoch)
 
         self.trial.report(val_mean_r2_score, self.current_epoch)
         if self.trial.should_prune():

@@ -63,20 +63,20 @@ def init_optuna(trial: optuna.Trial):
         'trial.number': trial.number
     }
 
-    wandb.init(
-        project='winged-bull',
-        config=config,
-        group=STUDY_NAME,
-        reinit=True
-    )
-
     return trial, config, train_dataloader, val_dataloader
 
 
 def objective(trial: optuna.Trial):
     torch.cuda.empty_cache()
     trial, config, train_dataloader, val_dataloader = init_optuna(trial)
-    model = LightningModel(config, trial)
+
+    run = wandb.init(
+        project='winged-bull',
+        config=config,
+        group=STUDY_NAME
+    )
+
+    model = LightningModel(config, trial, run)
 
     trainer = pl.Trainer(
         logger=False,
@@ -89,6 +89,8 @@ def objective(trial: optuna.Trial):
     trainer.fit(model=model,
                 train_dataloaders=train_dataloader,
                 val_dataloaders=val_dataloader)
+
+    run.finish()
 
     return trainer.callback_metrics['best_score'].detach()
 
