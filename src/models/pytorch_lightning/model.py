@@ -173,7 +173,7 @@ class LightningModel(pl.LightningModule):
             save_path = os.path.join(save_folder, file_name)
             torch.save(self.model, save_path)
 
-        self.log('best_score', self.best_score)  # for objective return function
+        self.log('best_score', self.best_score, on_epoch=False)  # for objective return function
         wandb.log({'best_score': self.best_score}, step=self.current_epoch)
 
     def on_validation_epoch_end(self):

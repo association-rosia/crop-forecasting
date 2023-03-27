@@ -91,7 +91,7 @@ def objective(trial):
                 train_dataloaders=train_dataloader,
                 val_dataloaders=val_dataloader)
 
-    return trainer.callback_metrics['best_score'].item()
+    return trainer.callback_metrics['best_score'].detach()
 
 
 def get_data():
