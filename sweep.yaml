@@ -48,4 +48,4 @@ parameters:
     distribution: int_uniform
     max: 2
     min: 1
-program: src/models/pytorch_lightning/train.py
+program: src/models/train.py

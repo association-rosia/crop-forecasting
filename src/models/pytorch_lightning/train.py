@@ -43,18 +43,18 @@ def train():
 
 
 def init_wandb():
-    epochs = wandb.config.epochs  # 20
-    dropout = wandb.config.dropout  # trial.suggest_uniform('dropout', 0.5, 0.8)
-    criterion = wandb.config.criterion  # MSELoss
-    optimizer = wandb.config.optimizer  # trial.suggest_categorical('optimizer', choices=['AdamW', 'RMSprop'])
-    batch_size = wandb.config.batch_size  # trial.suggest_categorical('batch_size', [8, 16, 32, 64])
-    learning_rate = wandb.config.learning_rate  # trial.suggest_loguniform('learning_rate', 5e-5, 5e-3)
-    c_out_in_features_1 = wandb.config.c_out_in_features_1  # trial.suggest_int('c_out_in_features_1', int(sqrt(c_in_features)), 2 * c_in_features)
-    c_out_in_features_2 = wandb.config.c_out_in_features_2  # trial.suggest_int('c_out_in_features_2', int(sqrt(c_in_features)), 2 * c_in_features)
-    m_num_layers = wandb.config.m_num_layers  # trial.suggest_int('m_num_layers', 1, 2)
-    s_num_layers = wandb.config.s_num_layers  # trial.suggest_int('s_num_layers', 1, 2)
-    s_hidden_size = wandb.config.s_hidden_size  # trial.suggest_int('s_hidden_size', 64, 256)
-    m_hidden_size = wandb.config.m_hidden_size  # trial.suggest_int('m_hidden_size', 64, 256)
+    epochs = wandb.config.epochs
+    dropout = wandb.config.dropout
+    criterion = wandb.config.criterion
+    optimizer = wandb.config.optimizer
+    batch_size = wandb.config.batch_size
+    learning_rate = wandb.config.learning_rate
+    c_out_in_features_1 = wandb.config.c_out_in_features_1
+    c_out_in_features_2 = wandb.config.c_out_in_features_2
+    m_num_layers = wandb.config.m_num_layers
+    s_num_layers = wandb.config.s_num_layers
+    s_hidden_size = wandb.config.s_hidden_size
+    m_hidden_size = wandb.config.m_hidden_size
     train_dataloader, val_dataloader, first_batch = get_data(batch_size)
     c_in_features = s_hidden_size - 2 + m_hidden_size - 2 + first_batch['g_input'].shape[0]
 

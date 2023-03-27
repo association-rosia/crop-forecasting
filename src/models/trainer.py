@@ -14,14 +14,13 @@ from utils import ROOT_DIR
 
 
 class Trainer():
-    def __init__(self, model, train_loader, val_loader, epochs, criterion, optimizer, scheduler, device):
+    def __init__(self, model, train_dataloader, val_dataloader, epochs, criterion, optimizer, device):
         self.model = model
-        self.train_loader = train_loader
-        self.val_loader = val_loader
+        self.train_loader = train_dataloader
+        self.val_loader = val_dataloader
         self.criterion = criterion
         self.epochs = epochs
         self.optimizer = optimizer
-        self.scheduler = scheduler
         self.device = device
         self.timestamp = int(datetime.now().timestamp())
         self.best_score = 0.
@@ -103,9 +102,6 @@ class Trainer():
 
         return val_loss, val_r2_score, val_mean_r2_score
 
-    def early_stopping(self):
-        return True
-
     def save(self, score):
         save_folder = join(ROOT_DIR, 'models')
 
@@ -135,7 +131,6 @@ class Trainer():
             train_losses.append(train_loss)
 
             val_loss, val_r2_score, val_mean_r2_score = self.val_one_epoch()
-            self.scheduler.step(val_loss)
             val_losses.append(val_loss)
 
             self.save(val_mean_r2_score)
