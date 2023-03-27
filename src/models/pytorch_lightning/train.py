@@ -88,7 +88,7 @@ def objective(trial):
 
     trainer.fit(model, data)
 
-    return trainer.callback_metrics['best_score'].detach()
+    return trainer.callback_metrics['best_score'].item()
 
 
 def get_data():
