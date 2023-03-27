@@ -4,9 +4,9 @@ warnings.filterwarnings('ignore')
 
 import pytorch_lightning as pl
 from model import LightningModel
-from data import LightningData
+from data import get_dataloaders
 
-from math import sqrt, ceil
+from math import sqrt
 
 import torch
 import optuna
@@ -30,7 +30,7 @@ def main():
 
 
 def init_optuna(trial):
-    data, first_batch = get_data()
+    train_dataloader, val_dataloader, first_batch = get_data()
     s_hidden_size = trial.suggest_int('s_hidden_size', 64, 256)
     s_num_layers = trial.suggest_int('s_num_layers', 1, 2)
     m_hidden_size = trial.suggest_int('m_hidden_size', 64, 256)
@@ -59,8 +59,8 @@ def init_optuna(trial):
         'c_in_features': c_in_features,
         'c_out_in_features_1': c_out_in_features_1,
         'c_out_in_features_2': c_out_in_features_2,
-        'train_size': ceil(data.train_size / BATCH_SIZE),
-        'val_size': ceil(data.val_size / BATCH_SIZE),
+        'train_size': len(train_dataloader),
+        'val_size': len(val_dataloader),
         'trial.number': trial.number
     }
 
@@ -71,11 +71,11 @@ def init_optuna(trial):
         reinit=True
     )
 
-    return trial, config, data
+    return trial, config, train_dataloader, val_dataloader
 
 
 def objective(trial):
-    trial, config, data = init_optuna(trial)
+    trial, config, train_dataloader, val_dataloader = init_optuna(trial)
     model = LightningModel(config, trial)
 
     trainer = pl.Trainer(
@@ -83,21 +83,23 @@ def objective(trial):
         enable_checkpointing=False,
         num_sanity_val_steps=0,
         max_epochs=config['epochs'],
-        accelerator='auto'
+        accelerator='auto',
+        precision=16
     )
 
-    trainer.fit(model, data)
+    trainer.fit(model=model,
+                train_dataloaders=train_dataloader,
+                val_dataloaders=val_dataloader)
 
     return trainer.callback_metrics['best_score'].item()
 
 
 def get_data():
-    data = LightningData(BATCH_SIZE, VAL_RATE, num_workers=4)  # 4 * num_GPU
-    data.setup(stage='fit')
-    first_batch = data.train_dataset[0]
+    train_dataloader, val_dataloader = get_dataloaders(BATCH_SIZE, VAL_RATE)  # 4 * num_GPU
+    first_batch = train_dataloader.dataset[0]
     print('GET DATA...')
 
-    return data, first_batch
+    return train_dataloader, val_dataloader, first_batch
 
 
 if __name__ == '__main__':
