@@ -101,10 +101,9 @@ class CustomModel(nn.Module):
 
 
 class LightningModel(pl.LightningModule):
-    def __init__(self, config, trial, run):
+    def __init__(self, config, run):
         super().__init__()
         self.model = CustomModel(config)
-        self.trial = trial
         self.run = run
         self.learning_rate = config['learning_rate']
         self.optimizer = config['optimizer']
@@ -185,10 +184,6 @@ class LightningModel(pl.LightningModule):
         self.run.log({'val_loss': self.val_loss,
                       'val_r2_score': val_r2_score,
                       'val_mean_r2_score': val_mean_r2_score}, step=self.current_epoch)
-
-        self.trial.report(val_mean_r2_score, self.current_epoch)
-        if self.trial.should_prune():
-            raise optuna.TrialPruned()
 
         self.val_loss = 0.
         self.val_observations = []

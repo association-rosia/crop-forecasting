@@ -1,0 +1,51 @@
+method: bayes
+metric:
+  goal: maximize
+  name: best_score
+parameters:
+  batch_size:
+    distribution: int_uniform
+    max: 64
+    min: 8
+  c_out_in_features_1:
+    distribution: int_uniform
+    max: 1024
+    min: 16
+  c_out_in_features_2:
+    distribution: int_uniform
+    max: 1024
+    min: 16
+  criterion:
+    distribution: constant
+    value: MSELoss
+  dropout:
+    distribution: uniform
+    max: 0.8
+    min: 0.3
+  epochs:
+    distribution: constant
+    value: 20
+  learning_rate:
+    distribution: uniform
+    max: 5e-03
+    min: 5e-05
+  m_hidden_size:
+    distribution: int_uniform
+    max: 256
+    min: 64
+  m_num_layers:
+    distribution: int_uniform
+    max: 2
+    min: 1
+  optimizer:
+    distribution: constant
+    value: AdamW
+  s_hidden_size:
+    distribution: int_uniform
+    max: 256
+    min: 64
+  s_num_layers:
+    distribution: int_uniform
+    max: 2
+    min: 1
+program: src/models/pytorch_lightning/train.py
