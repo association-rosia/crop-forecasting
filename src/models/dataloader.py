@@ -68,44 +68,57 @@ class CustomDataset(Dataset):
         return item
 
 
-def get_loaders(config, num_workers):
-    batch_size = config['batch_size']
-    val_rate = config['val_rate']
-    stratification = config['stratification']
-    clustering = config['clustering']
+def create_train_val_idx(xdf_train, val_rate):
+    yields = xdf_train[TARGET][0, :].values
+    yields_distribution = stats.norm(loc=yields.mean(), scale=yields.std())
+    bounds = yields_distribution.cdf([0, 1])
+    bins = np.linspace(*bounds, num=10)
+    stratify = np.digitize(yields, bins)
+    train_idx, val_idx = train_test_split(xdf_train.ts_obs,
+                                          test_size=val_rate,
+                                          random_state=42,
+                                          stratify=stratify)
 
+    return train_idx, val_idx
+
+
+def get_dataloaders(batch_size, val_rate, num_workers=4):  # 4 * num_GPU
     dataset_path = join(ROOT_DIR, 'data', 'processed', FOLDER, 'train_enriched.nc')
     xdf_train = xr.open_dataset(dataset_path, engine='scipy')
-
-    if clustering:
-        train_indexes = pd.read_csv(join(ROOT_DIR, 'data', 'processed', 'train_index.csv'), header=None)[0].tolist()
-        xdf_train = xdf_train.sel(ts_obs=train_indexes)
-
-    if stratification:
-        yields = xdf_train[TARGET][0, :].values
-        yields_distribution = stats.norm(loc=yields.mean(), scale=yields.std())
-        bounds = yields_distribution.cdf([0, 1])
-        bins = np.linspace(*bounds, num=stratification)
-        stratify = np.digitize(yields, bins)
-        train_idx, val_idx = train_test_split(xdf_train.ts_obs, test_size=val_rate, random_state=42, stratify=stratify)
-    else:
-        train_idx, val_idx = train_test_split(xdf_train.ts_obs, test_size=val_rate, random_state=42)
+    train_idx, val_idx = create_train_val_idx(xdf_train, val_rate)
 
     train_array = xdf_train.sel(ts_obs=train_idx)
     train_shape = train_array['ts_id'].shape
     train_array['ts_id'].values = np.arange(np.prod(train_shape)).reshape(train_shape)
     train_dataset = CustomDataset(train_array)
-    train_loader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers)
+    train_dataloader = DataLoader(train_dataset,
+                                  batch_size=batch_size,
+                                  num_workers=num_workers,
+                                  drop_last=True,
+                                  shuffle=True)
 
     val_array = xdf_train.sel(ts_obs=val_idx)
     val_shape = val_array['ts_id'].shape
     val_array['ts_id'].values = np.arange(np.prod(val_shape)).reshape(val_shape)
     val_dataset = CustomDataset(val_array)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers)
+    val_dataloader = DataLoader(val_dataset,
+                                batch_size=batch_size,
+                                num_workers=num_workers,
+                                drop_last=True)
 
     dataset_path = join(ROOT_DIR, 'data', 'processed', FOLDER, 'test_enriched.nc')
     xdf_test = xr.open_dataset(dataset_path, engine='scipy')
     test_dataset = CustomDataset(xdf_test, test=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, num_workers=num_workers)
+    test_dataloader = DataLoader(test_dataset,
+                                 batch_size=batch_size,
+                                 num_workers=num_workers,
+                                 drop_last=True)
 
-    return train_loader, val_loader, test_loader
+    return train_dataloader, val_dataloader, test_dataloader
+
+
+def get_data(batch_size, val_rate):
+    train_dataloader, val_dataloader, _ = get_dataloaders(batch_size, val_rate)
+    first_batch = train_dataloader.dataset[0]
+
+    return train_dataloader, val_dataloader, first_batch

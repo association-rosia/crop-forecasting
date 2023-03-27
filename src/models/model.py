@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 
 
-class LSTMModel(nn.Module):
-    def __init__(self, config, device):
-        super(LSTMModel, self).__init__()
+class CustomModel(nn.Module):
+    def __init__(self, config):
+        super().__init__()
         self.s_hidden_size = config['s_hidden_size']
         self.m_hidden_size = config['m_hidden_size']
         self.s_num_features = config['s_num_features']
@@ -14,14 +14,11 @@ class LSTMModel(nn.Module):
         self.m_num_features = config['m_num_features']
 
         self.g_in_features = config['g_in_features']
-
         self.c_in_features = config['c_in_features']
         self.c_out_in_features_1 = config['c_out_in_features_1']
         self.c_out_in_features_2 = config['c_out_in_features_2']
 
         self.dropout = config['dropout']
-
-        self.device = device
 
         self.s_lstm = nn.LSTM(self.s_num_features, self.s_hidden_size, self.s_num_layers, batch_first=True)
         self.s_bn_lstm = nn.BatchNorm1d(self.s_hidden_size)
@@ -49,9 +46,7 @@ class LSTMModel(nn.Module):
         g_input = x['g_input']
 
         # Spectral LSTM
-        s_h0 = torch.zeros(self.s_num_layers, s_input.size(0), self.s_hidden_size).requires_grad_().to(self.device)
-        s_c0 = torch.zeros(self.s_num_layers, s_input.size(0), self.s_hidden_size).requires_grad_().to(self.device)
-        s_output, _ = self.s_lstm(s_input, (s_h0, s_c0))
+        s_output, _ = self.s_lstm(s_input)
         s_output = self.s_bn_lstm(s_output[:, -1, :])
         s_output = self.tanh(s_output)
         s_output = self.dropout(s_output)
@@ -64,9 +59,7 @@ class LSTMModel(nn.Module):
         s_output = self.dropout(s_output)
 
         # Meteorological LSTM
-        m_h0 = torch.zeros(self.m_num_layers, m_input.size(0), self.m_hidden_size).requires_grad_().to(self.device)
-        m_c0 = torch.zeros(self.m_num_layers, m_input.size(0), self.m_hidden_size).requires_grad_().to(self.device)
-        m_output, _ = self.m_lstm(m_input, (m_h0, m_c0))
+        m_output, _ = self.m_lstm(m_input)
         m_output = self.m_bn_lstm(m_output[:, -1, :])
         m_output = self.tanh(m_output)
         m_output = self.dropout(m_output)
