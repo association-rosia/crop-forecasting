@@ -164,12 +164,12 @@ class LightningModel(pl.LightningModule):
             self.best_score = score
             os.makedirs(save_folder, exist_ok=True)
 
-            former_model = [f for f in os.listdir(save_folder) if f.split('_')[0] == str(self.timestamp)]
+            former_model = [f for f in os.listdir(save_folder) if f.split('_')[-1] == f'{self.timestamp}.pt']
             if len(former_model) == 1:
                 os.remove(os.path.join(save_folder, former_model[0]))
 
             score = str(score)[:7].replace('.', '-')
-            file_name = f'{self.timestamp}_model_{score}.pt'
+            file_name = f'{score}_model_{self.timestamp}.pt'
             save_path = os.path.join(save_folder, file_name)
             torch.save(self.model, save_path)
 
@@ -186,6 +186,6 @@ class LightningModel(pl.LightningModule):
                       'val_mean_r2_score': val_mean_r2_score}, step=self.current_epoch)
 
         self.val_loss = 0.
-        self.val_observations = []
-        self.val_outputs = []
-        self.val_labels = []
+        self.val_observations.clear()
+        self.val_outputs.clear()
+        self.val_labels.clear()

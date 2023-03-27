@@ -45,7 +45,6 @@ def get_dataloaders(batch_size, val_rate, num_workers=4):  # 4 * num_GPU
     train_dataloader = DataLoader(train_dataset,
                                   batch_size=batch_size,
                                   num_workers=num_workers,
-                                  pin_memory=True,
                                   shuffle=True)
 
     val_array = xdf_train.sel(ts_obs=val_idx)
@@ -54,7 +53,6 @@ def get_dataloaders(batch_size, val_rate, num_workers=4):  # 4 * num_GPU
     val_dataset = CustomDataset(val_array)
     val_dataloader = DataLoader(val_dataset,
                                 batch_size=batch_size,
-                                num_workers=num_workers,
-                                pin_memory=True)
+                                num_workers=num_workers)
 
     return train_dataloader, val_dataloader
