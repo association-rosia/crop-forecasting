@@ -14,7 +14,7 @@ from scipy.signal import savgol_filter
 from sklearn.preprocessing import (MinMaxScaler, QuantileTransformer,
                                    RobustScaler, StandardScaler)
 
-parent = os.path.abspath(".")
+parent = os.path.abspath("../features")
 sys.path.insert(1, parent)
 
 from os.path import join

@@ -7,7 +7,7 @@ from sklearn.preprocessing import (MinMaxScaler, PowerTransformer,
                                    QuantileTransformer, RobustScaler,
                                    StandardScaler)
 
-parent = os.path.abspath(".")
+parent = os.path.abspath("../features")
 sys.path.insert(1, parent)
 
 

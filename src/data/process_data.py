@@ -13,7 +13,7 @@ from datascaler import DatasetScaler
 from preprocessing import Concatenator, Smoother
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
-parent = os.path.abspath(".")
+parent = os.path.abspath("../features")
 sys.path.insert(1, parent)
 
 from tqdm import tqdm
