@@ -1,33 +1,27 @@
+import copy
+import time
 from collections import defaultdict
 from itertools import product
-import time
-import copy
 
 import numpy as np
+import optuna
 import pandas as pd
 import xarray as xr
-
-from tqdm import tqdm
-
-from sklearn.base import is_classifier, clone
-
-from sklearn.model_selection._split import check_cv
-from sklearn.model_selection._validation import _fit_and_score
-from sklearn.model_selection._validation import _insert_error_scores
-from sklearn.model_selection._validation import _warn_or_raise_about_fit_failures
 from joblib import Parallel
-from sklearn.utils.validation import indexable, _check_fit_params
-from sklearn.utils.fixes import delayed
-from sklearn.metrics._scorer import _check_multimetric_scoring
+from sklearn.base import clone, is_classifier
 from sklearn.metrics import check_scoring
-
-from sklearn.model_selection import GridSearchCV, KFold
+from sklearn.metrics._scorer import _check_multimetric_scoring
+from sklearn.model_selection import GridSearchCV, KFold, cross_val_score
+from sklearn.model_selection._split import check_cv
+from sklearn.model_selection._validation import (
+    _fit_and_score, _insert_error_scores, _warn_or_raise_about_fit_failures)
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import cross_val_score
+from sklearn.utils.fixes import delayed
+from sklearn.utils.validation import _check_fit_params, indexable
+from tqdm import tqdm
 
 import wandb
 
-import optuna
 
 class OptunaSearch:
     def __init__(

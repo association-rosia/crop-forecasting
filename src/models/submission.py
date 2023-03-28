@@ -1,21 +1,22 @@
+import os
+import sys
+
 import pandas as pd
 import torch
+from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
 
-from sklearn.preprocessing import MinMaxScaler
-
-import os, sys
 parent = os.path.abspath('.')
 sys.path.insert(1, parent)
 
-from dataloader import get_loaders
-
-from src.constants import TARGET, TARGET_TEST
-
-from utils import ROOT_DIR
 from os.path import join
 
-MODEL = 'toasty-sky-343.pt'
+from dataloader import get_dataloaders
+
+from src.constants import TARGET, TARGET_TEST
+from utils import ROOT_DIR
+
+MODEL = 'lucky-sweep-4.pt'
 
 
 def rounded_yield(x, crop_yields):
@@ -34,7 +35,7 @@ def get_device():
     return device
 
 
-class Evaluator():
+class Evaluator:
     def __init__(self, test_loader, device):
         self.test_loader = test_loader
         self.device = device
@@ -58,7 +59,7 @@ class Evaluator():
         
         crop_yields = train_df[TARGET].unique().tolist()
         test_df[TARGET_TEST] = test_df[TARGET_TEST].apply(lambda x: rounded_yield(x, crop_yields))
-        test_df.to_csv('submission.csv', index=False)
+        test_df.to_csv(f'submissions/{MODEL}.csv', index=False)
         
         return True
         
@@ -82,11 +83,9 @@ class Evaluator():
         
 if __name__ == '__main__':
     device = get_device()
+    _, _, test_dataloader = get_dataloaders(batch_size=64, val_rate=0.2)
     
-    config = {'batch_size': 8, 'val_rate': 0.2, 'stratification': False, 'clustering': False}
-    _, _, test_loader = get_loaders(config, num_workers=4)
-    
-    evaluator = Evaluator(test_loader, device)
+    evaluator = Evaluator(test_dataloader, device)
     
     model_path = join(ROOT_DIR, 'models', MODEL)
     model = torch.load(model_path).to(device)
