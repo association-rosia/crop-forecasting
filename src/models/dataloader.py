@@ -1,24 +1,22 @@
-from src.constants import S_COLUMNS, M_COLUMNS, G_COLUMNS, TARGET, FOLDER
+import os
+import sys
 
 import numpy as np
 import pandas as pd
-import xarray as xr
-
-from scipy import stats
-
 import torch
-from torch.utils.data import Dataset, DataLoader
-
+import xarray as xr
+from scipy import stats
 from sklearn.model_selection import train_test_split
+from torch.utils.data import DataLoader, Dataset
 
-import os
-import sys
+from src.constants import FOLDER, G_COLUMNS, M_COLUMNS, S_COLUMNS, TARGET
 
 parent = os.path.abspath('.')
 sys.path.insert(1, parent)
 
-from utils import ROOT_DIR
 from os.path import join
+
+from utils import ROOT_DIR
 
 
 class CustomDataset(Dataset):
@@ -85,8 +83,8 @@ def create_train_val_idx(xdf_train, val_rate):
 def get_dataloaders(batch_size, val_rate, num_workers=4):  # 4 * num_GPU
     dataset_path = join(ROOT_DIR, 'data', 'processed', FOLDER, 'train_enriched.nc')
     xdf_train = xr.open_dataset(dataset_path, engine='scipy')
-    train_idx, val_idx = create_train_val_idx(xdf_train, val_rate)
 
+    train_idx, val_idx = create_train_val_idx(xdf_train, val_rate)
     train_array = xdf_train.sel(ts_obs=train_idx)
     train_shape = train_array['ts_id'].shape
     train_array['ts_id'].values = np.arange(np.prod(train_shape)).reshape(train_shape)

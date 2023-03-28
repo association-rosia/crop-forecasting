@@ -1,28 +1,28 @@
 import glob
-from typing import Union
 import warnings
+from typing import Union
 
 warnings.filterwarnings("ignore")
+
+import os
+import sys
 
 import numpy as np
 import pandas as pd
 import xarray as xr
-
 from scipy.signal import savgol_filter
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, QuantileTransformer
-
-import os, sys
+from sklearn.preprocessing import (MinMaxScaler, QuantileTransformer,
+                                   RobustScaler, StandardScaler)
 
 parent = os.path.abspath(".")
 sys.path.insert(1, parent)
 
-from src.constants import S_COLUMNS, G_COLUMNS, M_COLUMNS
-
-from utils import ROOT_DIR
 from os.path import join
 
+from sklearn.base import BaseEstimator, OneToOneFeatureMixin, TransformerMixin
 
-from sklearn.base import OneToOneFeatureMixin, TransformerMixin, BaseEstimator
+from src.constants import G_COLUMNS, M_COLUMNS, S_COLUMNS
+from utils import ROOT_DIR
 
 
 class Scaler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):

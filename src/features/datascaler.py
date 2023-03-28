@@ -1,10 +1,11 @@
+import os
+import sys
 from typing import Union
 
 import xarray as xr
-
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, PowerTransformer, QuantileTransformer
-
-import os, sys
+from sklearn.preprocessing import (MinMaxScaler, PowerTransformer,
+                                   QuantileTransformer, RobustScaler,
+                                   StandardScaler)
 
 parent = os.path.abspath(".")
 sys.path.insert(1, parent)

@@ -1,19 +1,47 @@
-import torch
-from tqdm import tqdm
-from sklearn.metrics import r2_score
-import pandas as pd
-from datetime import datetime
-from os.path import join
-import wandb
-
 import os
 import sys
+from datetime import datetime
+from math import sqrt
+from os.path import join
+
+import pandas as pd
+import torch
+from sklearn.metrics import r2_score
+from tqdm import tqdm
+
+import wandb
+
 parent = os.path.abspath('.')
 sys.path.insert(1, parent)
 from utils import ROOT_DIR
 
 
-class Trainer():
+def compute_weighted_score(val_scores):
+    weighted_score = 0.
+    total_weights = 0
+
+    for i, val_score in enumerate(val_scores):
+        weighted_score += sqrt(i + 1) * val_score
+        total_weights += sqrt(i + 1)
+
+    weighted_score /= total_weights
+
+    return weighted_score
+
+
+def compute_r2_scores(observations, labels, preds):
+    df = pd.DataFrame()
+    df['observations'] = observations
+    df['labels'] = labels
+    df['preds'] = preds
+    full_r2_score = r2_score(df.labels, df.preds)
+    df = df.groupby(['observations']).mean()
+    mean_r2_score = r2_score(df.labels, df.preds)
+
+    return full_r2_score, mean_r2_score
+
+
+class Trainer:
     def __init__(self, model, train_dataloader, val_dataloader, epochs, criterion, optimizer, device):
         self.model = model
         self.train_loader = train_dataloader
@@ -23,7 +51,7 @@ class Trainer():
         self.optimizer = optimizer
         self.device = device
         self.timestamp = int(datetime.now().timestamp())
-        self.best_score = 0.
+        self.val_best_r2_score = 0.
 
     def train_one_epoch(self):
         train_loss = 0.
@@ -52,23 +80,13 @@ class Trainer():
             train_loss += loss.item()
             epoch_loss = train_loss / (i + 1)
 
-            pbar.set_description(
-                f'TRAIN - Batch: {i + 1}/{len(self.train_loader)} Epoch Loss: {epoch_loss:.5f} - Batch Loss: {loss.item():.5f}')
+            pbar.set_description(f'TRAIN - Batch: {i + 1}/{len(self.train_loader)} - '
+                                 f'Epoch Loss: {epoch_loss:.5f} - '
+                                 f'Batch Loss: {loss.item():.5f}')
 
         train_loss /= len(self.train_loader)
 
         return train_loss
-
-    def compute_r2_scores(self, observations, labels, preds):
-        df = pd.DataFrame()
-        df['observations'] = observations
-        df['labels'] = labels
-        df['preds'] = preds
-        full_r2_score = r2_score(df.labels, df.preds)
-        df = df.groupby(['observations']).mean()
-        mean_r2_score = r2_score(df.labels, df.preds)
-
-        return full_r2_score, mean_r2_score
 
     def val_one_epoch(self):
         val_loss = 0.
@@ -94,44 +112,45 @@ class Trainer():
             val_labels += labels.squeeze().tolist()
             val_preds += outputs.squeeze().tolist()
 
-            pbar.set_description(
-                f'VAL - Batch: {i + 1}/{len(self.val_loader)} Epoch Loss: {epoch_loss:.5f} - Batch Loss: {loss.item():.5f}')
+            pbar.set_description(f'VAL - Batch: {i + 1}/{len(self.val_loader)} - '
+                                 f'Epoch Loss: {epoch_loss:.5f} - '
+                                 f'Batch Loss: {loss.item():.5f}')
 
         val_loss /= len(self.val_loader)
-        val_r2_score, val_mean_r2_score = self.compute_r2_scores(observations, val_labels, val_preds)
+        val_r2_score, val_mean_r2_score = compute_r2_scores(observations, val_labels, val_preds)
 
         return val_loss, val_r2_score, val_mean_r2_score
 
     def save(self, score):
         save_folder = join(ROOT_DIR, 'models')
 
-        if score > self.best_score:
-            self.best_score = score
+        if score > self.val_best_r2_score:
+            self.val_best_r2_score = score
             os.makedirs(save_folder, exist_ok=True)
 
             # delete former best model 
-            former_model = [f for f in os.listdir(save_folder) if f.split('_')[0] == str(self.timestamp)]
+            former_model = [f for f in os.listdir(save_folder) if f.split('_')[-1] == f'{self.timestamp}.pt']
             if len(former_model) == 1:
                 os.remove(join(save_folder, former_model[0]))
 
             # save new model 
             score = str(score)[:7].replace('.', '-')
-            file_name = f'{self.timestamp}_model_{score}.pt'
+            file_name = f'{score}_model_{self.timestamp}.pt'
             save_path = join(save_folder, file_name)
             torch.save(self.model, save_path)
 
     def train(self):  # train model
-        train_losses = []
-        val_losses = []
+        val_scores = []
 
         iter_epoch = tqdm(range(self.epochs), leave=False)
         for epoch in iter_epoch:
             iter_epoch.set_description(f'EPOCH {epoch + 1}/{self.epochs}')
             train_loss = self.train_one_epoch()
-            train_losses.append(train_loss)
 
             val_loss, val_r2_score, val_mean_r2_score = self.val_one_epoch()
-            val_losses.append(val_loss)
+            val_scores.append(val_mean_r2_score)
+
+            val_weighted_r2_score = compute_weighted_score(val_scores)
 
             self.save(val_mean_r2_score)
 
@@ -140,8 +159,13 @@ class Trainer():
                 'val_loss': val_loss,
                 'val_r2_score': val_r2_score,
                 'val_mean_r2_score': val_mean_r2_score,
-                'best_score': self.best_score
+                'val_weighted_r2_score': val_weighted_r2_score,
+                'best_score': self.val_best_r2_score
             })
 
-            iter_epoch.write(
-                f'EPOCH {epoch + 1}/{self.epochs}: Train = {train_loss:.5f} - Val = {val_loss:.5f} - Val R2 = {val_r2_score:.5f} - Val mean R2 = {val_mean_r2_score:.5f}')
+            iter_epoch.write(f'EPOCH {epoch + 1}/{self.epochs}: '
+                             f'Train = {train_loss:.5f} - '
+                             f'Val = {val_loss:.5f} - '
+                             f'Val R2 = {val_r2_score:.5f} - '
+                             f'Val mean R2 = {val_mean_r2_score:.5f} - '
+                             f'Val weighted R2 = {val_weighted_r2_score:.5f}')

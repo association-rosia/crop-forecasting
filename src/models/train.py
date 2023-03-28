@@ -1,4 +1,5 @@
 import warnings
+
 warnings.filterwarnings('ignore')
 
 import os
@@ -12,6 +13,7 @@ import torch.nn as nn
 from dataloader import get_data
 from model import CustomModel
 from trainer import Trainer
+
 import wandb
 
 
@@ -48,7 +50,8 @@ def init_wandb():
     )
 
     epochs = wandb.config.epochs
-    dropout = wandb.config.dropout
+    lstm_dropout = wandb.config.lstm_dropout
+    fc_dropout = wandb.config.fc_dropout
     criterion = wandb.config.criterion
     optimizer = wandb.config.optimizer
     batch_size = wandb.config.batch_size
@@ -59,7 +62,7 @@ def init_wandb():
     s_num_layers = wandb.config.s_num_layers
     s_hidden_size = wandb.config.s_hidden_size
     m_hidden_size = wandb.config.m_hidden_size
-    train_dataloader, val_dataloader, first_batch = get_data(batch_size, val_rate=0.2)
+    train_dataloader, val_dataloader, first_batch = get_data(batch_size, 0.2)
     c_in_features = s_hidden_size - 2 + m_hidden_size - 2 + first_batch['g_input'].shape[0]
 
     config = {
@@ -69,7 +72,8 @@ def init_wandb():
         'm_hidden_size': m_hidden_size,
         'm_num_layers': m_num_layers,
         'learning_rate': learning_rate,
-        'dropout': dropout,
+        'lstm_dropout': lstm_dropout,
+        'fc_dropout': fc_dropout,
         'epochs': epochs,
         'optimizer': optimizer,
         'criterion': criterion,
