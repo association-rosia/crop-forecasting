@@ -2,7 +2,13 @@ from typing import Union
 
 import xarray as xr
 
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, PowerTransformer, QuantileTransformer
+from sklearn.preprocessing import (
+    StandardScaler,
+    MinMaxScaler,
+    RobustScaler,
+    PowerTransformer,
+    QuantileTransformer,
+)
 
 import os, sys
 
@@ -13,14 +19,37 @@ sys.path.insert(1, parent)
 class DatasetScaler:
     def __init__(
         self,
-        scaler_s: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer],
+        scaler_s: Union[
+            StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer
+        ],
         columns_s: list[str],
-        scaler_g: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer],
+        scaler_g: Union[
+            StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer
+        ],
         columns_g: list[str],
-        scaler_m: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer],
+        scaler_m: Union[
+            StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer
+        ],
         columns_m: list[str],
         scaler_t: MinMaxScaler,
     ) -> None:
+        """Scaler for Vegetable Indice, Geographical, Meteorological and Target.
+
+        :param scaler_s: Scikit-Learn scaler for Vegetable Indice data
+        :type scaler_s: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer]
+        :param columns_s: Vegetable Indice columns name
+        :type columns_s: list[str]
+        :param scaler_g: Scikit-Learn scaler for Geographical data
+        :type scaler_g: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer]
+        :param columns_g: Geografical columns name
+        :type columns_g: list[str]
+        :param scaler_m: Scikit-Learn scaler for Meteorological data
+        :type scaler_m: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer]
+        :param columns_m: Meteorological columns name
+        :type columns_m: list[str]
+        :param scaler_t: Scikit-Learn scaler for Target data
+        :type scaler_t: MinMaxScaler
+        """
 
         self.scaler_s = scaler_s
         self.columns_s = columns_s
@@ -30,14 +59,30 @@ class DatasetScaler:
         self.columns_m = columns_m
         self.scaler_t = scaler_t
 
-    def fit(self, xdf: xr.Dataset, target: str) -> None:
+    def fit(self, xdf: xr.Dataset, target: str) -> object:
+        """Fit all scalers to be used for later scaling.
+
+        :param xdf: The data used to fit all scalers, used for later scaling along the features axis.
+        :type xdf: xr.Dataset
+        :param target: Column name to fit the target scaler, used for later scaling along the target axis.
+        :type target: str
+        :return: Fitted scaler.
+        :rtype: object
+        """
+
         def fit_scaler(
             xdf: xr.Dataset,
             columns: list[str],
-            scaler: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer, MinMaxScaler],
+            scaler: Union[
+                StandardScaler,
+                RobustScaler,
+                PowerTransformer,
+                QuantileTransformer,
+                MinMaxScaler,
+            ],
         ):
             df = xdf[columns].to_dataframe()
-            
+
             return scaler.fit(df[columns])
 
         # Fit S data scaler
@@ -52,8 +97,26 @@ class DatasetScaler:
         return self
 
     def transform(self, xdf: xr.Dataset, target: str = None) -> xr.Dataset:
+        """Perform transform of each scaler.
+
+        :param xdf: The Dataset used to scale along the features axis.
+        :type xdf: xr.Dataset
+        :param target: Column name used to scale along the Target axis, defaults to None
+        :type target: str, optional
+        :return: Transformed Dataset.
+        :rtype: xr.Dataset
+        """
+
         def transform_data(
-            xdf: xr.Dataset, columns: str, scaler: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer, MinMaxScaler]
+            xdf: xr.Dataset,
+            columns: str,
+            scaler: Union[
+                StandardScaler,
+                RobustScaler,
+                PowerTransformer,
+                QuantileTransformer,
+                MinMaxScaler,
+            ],
         ) -> xr.Dataset:
             df = xdf[columns].to_dataframe()
             df.loc[:, columns] = scaler.transform(df[columns])
@@ -75,11 +138,38 @@ class DatasetScaler:
         return xdf
 
     def fit_transform(self, xdf: xr.Dataset, target: str) -> xr.Dataset:
+        """Fit to data, then transform it.
+
+        :param xdf: The data used to perform fit and transform.
+        :type xdf: xr.Dataset
+        :param target: Column name used to scale along the Target axis
+        :type target: str
+        :return: Transformed Dataset.
+        :rtype: xr.Dataset
+        """
         return self.fit(xdf, target).transform(xdf, target)
 
-    def inverse_transform(self, xdf: xr.Dataset, target: str = None):
+    def inverse_transform(self, xdf: xr.Dataset, target: str = None) -> xr.Dataset:
+        """Scale back the data to the original representation.
+
+        :param xdf: The data used to scale along the features axis.
+        :type xdf: xr.Dataset
+        :param target: Column name used to scale along the Target axis, defaults to None
+        :type target: str, optional
+        :return: Transformed Dataset.
+        :rtype: xr.Dataset
+        """
+
         def inverse_transform_data(
-            xdf: xr.Dataset, columns: str, scaler: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer, MinMaxScaler]
+            xdf: xr.Dataset,
+            columns: str,
+            scaler: Union[
+                StandardScaler,
+                RobustScaler,
+                PowerTransformer,
+                QuantileTransformer,
+                MinMaxScaler,
+            ],
         ) -> xr.Dataset:
             df = xdf[columns].to_dataframe()
             df.loc[:, columns] = scaler.inverse_transform(df[columns])
