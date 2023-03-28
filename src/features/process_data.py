@@ -1,24 +1,25 @@
-import joblib
 import warnings
+
+import joblib
 
 warnings.filterwarnings("ignore")
 
+import os
+import sys
+
 import numpy as np
 import xarray as xr
-
-from preprocessing import Smoother, Concatenator
 from datascaler import DatasetScaler
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-
-import os, sys
+from preprocessing import Concatenator, Smoother
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 parent = os.path.abspath(".")
 sys.path.insert(1, parent)
 
 from tqdm import tqdm
 
-from src.constants import FOLDER, S_COLUMNS, G_COLUMNS, M_COLUMNS, TARGET, TARGET_TEST
-
+from src.constants import (FOLDER, G_COLUMNS, M_COLUMNS, S_COLUMNS, TARGET,
+                           TARGET_TEST)
 from utils import ROOT_DIR
 
 

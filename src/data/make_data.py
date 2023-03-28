@@ -1,28 +1,25 @@
-import os
 import math
+import multiprocessing as mp
+import os
+import sys
 import time
-from tqdm import tqdm
 from datetime import datetime, timedelta
+from random import random, uniform
 
 import numpy as np
 import pandas as pd
-import xarray as xr
-
-import pystac_client
 import planetary_computer as pc
+import pystac_client
+import xarray as xr
 from odc.stac import stac_load
+from tqdm import tqdm
 
-import multiprocessing as mp
-from random import uniform, random
-
-import os, sys
-
-parent = os.path.abspath(".")
+parent = os.path.abspath('.')
 sys.path.insert(1, parent)
 
-from utils import ROOT_DIR
 from os.path import join
 
+from utils import ROOT_DIR
 
 # Make data constants
 SIZE = "adaptative"  # 'fixed'
