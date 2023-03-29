@@ -50,6 +50,8 @@ def ha_to_degree(field_size: float) -> float:  # Field_size (ha)
 
 
 def create_folders() -> str:
+    save_folder = None
+
     if NUM_AUGMENT > 1:
         save_folder = join(
             ROOT_DIR,
@@ -62,9 +64,7 @@ def create_folders() -> str:
         degree = str(round(DEGREE, 5)).replace(".", "-")
         save_folder = join(ROOT_DIR, "data", "external", "satellite", f"fixed_{degree}")
     elif SIZE == "adaptative":
-        save_folder = join(
-            ROOT_DIR, "data", "external", "satellite", f"adaptative_factor_{FACTOR}"
-        )
+        save_folder = join(ROOT_DIR, "data", "external", "satellite", f"adaptative_factor_{FACTOR}")
 
     os.makedirs(save_folder, exist_ok=True)
     return save_folder
@@ -96,7 +96,7 @@ def get_bbox(
     max_longitude = longitude + factors[2] * length
     max_latitude = latitude + factors[3] * length
 
-    return (min_longitude, min_latitude, max_longitude, max_latitude)
+    return min_longitude, min_latitude, max_longitude, max_latitude
 
 
 def get_time_period(havest_date: str, history_days: int) -> str:
@@ -204,16 +204,16 @@ class Checkpoint(Exception):
 
 def make_data(path: str, save_file: str) -> bool:
     """From a given csv at EY data format get satellite data
-    correponding to the localisation and date of each observation
+    corresponding to the localisation and date of each observation
     from microsoft api and save it into external directory.
-    Implemente an auto restart from the last observation saved.
+    Implement an auto restart from the last observation saved.
     Save data as nc format using scipy engine.
 
     :param path: CSV path of EY data.
     :type path: str
     :param save_file: Directory to save the Dataset.
     :type save_file: str
-    :raises Checkpoint: Auto save every houre.
+    :raises Checkpoint: Auto save every hour.
     :return: True if a checkpoint is reached, False otherwise.
     :rtype: bool
     """

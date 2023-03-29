@@ -141,7 +141,7 @@ class Trainer:
                 'val_loss': val_loss,
                 'val_r2_score': val_r2_score,
                 'val_mean_r2_score': val_mean_r2_score,
-                'best_score': self.val_best_r2_score
+                'val_best_r2_score': self.val_best_r2_score
             })
 
             iter_epoch.write(f'EPOCH {epoch + 1}/{self.epochs}: '

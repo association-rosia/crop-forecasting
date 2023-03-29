@@ -3,7 +3,13 @@ import torch.nn as nn
 
 
 class CustomModel(nn.Module):
-    def __init__(self, config):
+    """ PyTorch class to define our custom model
+
+    :param config: Contains all the model configs, also used in W&B logging
+    :type config: dict
+    """
+
+    def __init__(self, config: dict) -> None:
         super().__init__()
         self.s_hidden_size = config['s_hidden_size']
         self.m_hidden_size = config['m_hidden_size']
@@ -42,7 +48,14 @@ class CustomModel(nn.Module):
         self.lstm_dropout = nn.Dropout(self.lstm_p)
         self.fc_dropout = nn.Dropout(self.fc_p)
 
-    def forward(self, x):
+    def forward(self, x: dict) -> torch.Tensor:
+        """ Model forward pass function
+
+        :param x: Model inputs
+        :type x: dict
+        :return: Model output
+        :rtype: torch.Tensor
+        """
         s_input = x['s_input']
         m_input = x['m_input']
         g_input = x['g_input']
