@@ -43,9 +43,9 @@ class CustomDataset(Dataset):
 
         all_dates = pd.date_range(xdf_id['time'].min().values, xdf_id['time'].max().values, freq='D')
         all_dates = all_dates[-self.m_times:]
-        g_arr = xdf_id.sel(datetime=all_dates, name=xdf_id['District'])[M_COLUMNS].to_array().values
-        g_arr = g_arr.reshape((len(M_COLUMNS), self.m_times)).T
-        m_input = torch.tensor(g_arr)
+        m_arr = xdf_id.sel(datetime=all_dates, name=xdf_id['District'])[M_COLUMNS].to_array().values
+        m_arr = m_arr.reshape((len(M_COLUMNS), self.m_times)).T
+        m_input = torch.tensor(m_arr)
 
         if self.test:
             target = torch.tensor([0.])
@@ -67,7 +67,7 @@ class CustomDataset(Dataset):
 
 
 def create_train_val_idx(xdf_train, val_rate):
-    yields = xdf_train[TARGET][0, :].values
+    yields = xdf_train[TARGET].values
     yields_distribution = stats.norm(loc=yields.mean(), scale=yields.std())
     bounds = yields_distribution.cdf([0, 1])
     bins = np.linspace(*bounds, num=10)
