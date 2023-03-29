@@ -16,19 +16,6 @@ sys.path.insert(1, parent)
 from utils import ROOT_DIR
 
 
-def compute_weighted_score(val_scores):
-    weighted_score = 0.
-    total_weights = 0
-
-    for i, val_score in enumerate(val_scores):
-        weighted_score += sqrt(i + 1) * val_score
-        total_weights += sqrt(i + 1)
-
-    weighted_score /= total_weights
-
-    return weighted_score
-
-
 def compute_r2_scores(observations, labels, preds):
     df = pd.DataFrame()
     df['observations'] = observations
@@ -140,18 +127,13 @@ class Trainer:
             torch.save(self.model, save_path)
 
     def train(self):  # train model
-        val_scores = []
-
         iter_epoch = tqdm(range(self.epochs), leave=False)
+
         for epoch in iter_epoch:
             iter_epoch.set_description(f'EPOCH {epoch + 1}/{self.epochs}')
             train_loss = self.train_one_epoch()
 
             val_loss, val_r2_score, val_mean_r2_score = self.val_one_epoch()
-            val_scores.append(val_mean_r2_score)
-
-            val_weighted_r2_score = compute_weighted_score(val_scores)
-
             self.save(val_mean_r2_score)
 
             wandb.log({
@@ -159,7 +141,6 @@ class Trainer:
                 'val_loss': val_loss,
                 'val_r2_score': val_r2_score,
                 'val_mean_r2_score': val_mean_r2_score,
-                'val_weighted_r2_score': val_weighted_r2_score,
                 'best_score': self.val_best_r2_score
             })
 
@@ -167,5 +148,4 @@ class Trainer:
                              f'Train = {train_loss:.5f} - '
                              f'Val = {val_loss:.5f} - '
                              f'Val R2 = {val_r2_score:.5f} - '
-                             f'Val mean R2 = {val_mean_r2_score:.5f} - '
-                             f'Val weighted R2 = {val_weighted_r2_score:.5f}')
+                             f'Val mean R2 = {val_mean_r2_score:.5f}')
