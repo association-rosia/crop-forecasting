@@ -48,8 +48,8 @@ class Trainer:
         pbar = tqdm(self.train_loader, leave=False)
         for i, data in enumerate(pbar):
             keys_input = ['s_input', 'm_input', 'g_input']
-            inputs = {key: data[key].to(self.device) for key in keys_input}
-            labels = data['target'].float().to(self.device)
+            inputs = {key: data[key] for key in keys_input}
+            labels = data['target']
 
             # Zero gradients for every batch
             self.optimizer.zero_grad()
@@ -86,8 +86,8 @@ class Trainer:
         pbar = tqdm(self.val_loader, leave=False)
         for i, data in enumerate(pbar):
             keys_input = ['s_input', 'm_input', 'g_input']
-            inputs = {key: data[key].to(self.device) for key in keys_input}
-            labels = data['target'].float().to(self.device)
+            inputs = {key: data[key] for key in keys_input}
+            labels = data['target']
 
             outputs = self.model(inputs)
 
