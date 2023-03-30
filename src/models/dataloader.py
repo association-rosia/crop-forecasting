@@ -11,14 +11,12 @@ from torch.utils.data import DataLoader, Dataset
 
 from src.constants import FOLDER, G_COLUMNS, M_COLUMNS, S_COLUMNS, TARGET, TARGET_TEST
 
-parent = os.path.abspath('.')
+parent = os.path.abspath(".")
 sys.path.insert(1, parent)
 
 from os.path import join
 
 from utils import ROOT_DIR
-
-
 
 class CustomDataset(Dataset):
     def __init__(self, s_inputs, g_inputs, m_inputs, obs_targets, augment, device):
@@ -48,17 +46,23 @@ class CustomDataset(Dataset):
 
 
 def create_train_val_idx(xdf_train, val_rate):
+    """ Create train and validation indices
+
+    :param xdf_train:
+    :param val_rate:
+    :return:
+    """
     yields = xdf_train[TARGET].values
     yields_distribution = stats.norm(loc=yields.mean(), scale=yields.std())
     bounds = yields_distribution.cdf([0, 1])
     bins = np.linspace(*bounds, num=10)
     stratify = np.digitize(yields, bins)
-    train_idx, val_idx = train_test_split(xdf_train.ts_obs,
-                                          test_size=val_rate,
-                                          random_state=42,
-                                          stratify=stratify)
+    train_idx, val_idx = train_test_split(
+        xdf_train.ts_obs, test_size=val_rate, random_state=42, stratify=stratify
+    )
 
     return train_idx, val_idx
+
 
 
 def transform_data(xds: xr.Dataset, m_times: int = 120, test = False):
