@@ -10,7 +10,7 @@ sys.path.insert(1, parent)
 
 import torch
 import torch.nn as nn
-from dataloader import get_data
+from dataloader import get_dataloaders
 from model import CustomModel
 from trainer import Trainer
 
@@ -62,7 +62,8 @@ def init_wandb():
     s_num_layers = wandb.config.s_num_layers
     s_hidden_size = wandb.config.s_hidden_size
     m_hidden_size = wandb.config.m_hidden_size
-    train_dataloader, val_dataloader, first_batch = get_data(batch_size, 0.2, get_device())
+    train_dataloader, val_dataloader, _ = get_dataloaders(batch_size, 0.2, get_device())
+    first_batch = train_dataloader.dataset[0]
     c_in_features = s_hidden_size - 2 + m_hidden_size - 2 + first_batch['g_input'].shape[0]
 
     config = {
