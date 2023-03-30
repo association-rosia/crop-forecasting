@@ -1,4 +1,4 @@
-method: grid
+method: baye
 
 metric:
   name: val_best_r2_score
@@ -24,115 +24,46 @@ parameters:
     distribution: constant
     value: MSELoss
 
+  s_num_layers:
+    distribution: constant
+    value: 2
+
+  m_num_layers:
+    distribution: constant
+    value: 2
+
   learning_rate:
-    distribution: uniform
-    max: 1e-03
-    min: 1e-05
-    values: [1e-05, 2e-05, 3e-05, 4e-05, 5e-05]
+    distribution: categorical
+    values: [1e-05, 5e-05, 1e-04, 5e-04, 1e-03, 5e-03]
 
   scheduler_patience:
-    distribution: int_uniform
-    max: 10
-    min: 3
+    distribution: categorical
+    values: [3, 6, 9]
 
   batch_size:
     distribution: categorical
-    values: [8, 16, 32, 64]
+    values: [8, 16, 32]
 
   lstm_dropout:
     distribution: categorical
-    values: [0.1,
-             0.11,
-             0.12,
-             0.13,
-             0.14,
-             0.15,
-             0.16,
-             0.17,
-             0.18,
-             0.19,
-             0.2,
-             0.21,
-             0.22,
-             0.23,
-             0.24,
-             0.25,
-             0.26,
-             0.27,
-             0.28,
-             0.29,
-             0.3,
-             0.31,
-             0.32,
-             0.33,
-             0.34,
-             0.35,
-             0.36,
-             0.37,
-             0.38,
-             0.39,
-             0.4]
+    values: [0.1, 0.2, 0.3, 0.4]
 
   fc_dropout:
     distribution: categorical
-    values: [0.5,
-             0.51,
-             0.52,
-             0.53,
-             0.54,
-             0.55,
-             0.56,
-             0.57,
-             0.58,
-             0.59,
-             0.6,
-             0.61,
-             0.62,
-             0.63,
-             0.64,
-             0.65,
-             0.66,
-             0.67,
-             0.68,
-             0.69,
-             0.7,
-             0.71,
-             0.72,
-             0.73,
-             0.74,
-             0.75,
-             0.76,
-             0.77,
-             0.78,
-             0.79,
-             0.8]
-
-  s_num_layers:
-    distribution: int_uniform
-    max: 2
-    min: 1
+    values: [0.5, 0.6, 0.7, 0.8]
 
   s_hidden_size:
-    distribution: int_uniform
-    max: 256
-    min: 64
-
-  m_num_layers:
-    distribution: int_uniform
-    max: 2
-    min: 1
+    distribution: categorical
+    values: [64, 128, 192, 256]
 
   m_hidden_size:
-    distribution: int_uniform
-    max: 256
-    min: 64
+    distribution: categorical
+    values: [64, 128, 192, 256]
 
   c_out_in_features_1:
-    distribution: int_uniform
-    max: 512
-    min: 128
+    distribution: categorical
+    values: [128, 256, 384, 512]
 
   c_out_in_features_2:
-    distribution: int_uniform
-    max: 512
-    min: 128
+    distribution: categorical
+    values: [128, 256, 384, 512]

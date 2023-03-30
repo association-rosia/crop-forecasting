@@ -10,7 +10,7 @@ sys.path.insert(1, parent)
 
 import torch
 import torch.nn as nn
-from dataloader import get_data
+from dataloader import get_dataloaders
 from model import CustomModel
 from trainer import Trainer
 
@@ -28,15 +28,16 @@ def main():
 
     criterion = nn.MSELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'])
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='max', patience=config['scheduler_patience'], verbose=True,)
 
     train_config = {
         'model': model,
         'train_dataloader': train_dataloader,
         'val_dataloader': val_dataloader,
-        'optimizer': optimizer,
-        'criterion': criterion,
         'epochs': config['epochs'],
-        'device': device
+        'criterion': criterion,
+        'optimizer': optimizer,
+        'scheduler': scheduler,
     }
 
     trainer = Trainer(**train_config)
@@ -56,14 +57,17 @@ def init_wandb():
     optimizer = wandb.config.optimizer
     batch_size = wandb.config.batch_size
     learning_rate = wandb.config.learning_rate
+    scheduler_patience = wandb.config.scheduler_patience
     c_out_in_features_1 = wandb.config.c_out_in_features_1
     c_out_in_features_2 = wandb.config.c_out_in_features_2
     m_num_layers = wandb.config.m_num_layers
     s_num_layers = wandb.config.s_num_layers
     s_hidden_size = wandb.config.s_hidden_size
     m_hidden_size = wandb.config.m_hidden_size
-    train_dataloader, val_dataloader, first_batch = get_data(batch_size, 0.2)
-    c_in_features = s_hidden_size - 2 + m_hidden_size - 2 + first_batch['g_input'].shape[0]
+    train_dataloader, val_dataloader, _ = get_dataloaders(batch_size, 0.2)
+    first_row = train_dataloader.dataset[0]
+    
+    c_in_features = s_hidden_size - 2 + m_hidden_size - 2 + first_row['g_input'].shape[0]
 
     config = {
         'batch_size': batch_size,
@@ -72,14 +76,15 @@ def init_wandb():
         'm_hidden_size': m_hidden_size,
         'm_num_layers': m_num_layers,
         'learning_rate': learning_rate,
+        'scheduler_patience': scheduler_patience,
         'lstm_dropout': lstm_dropout,
         'fc_dropout': fc_dropout,
         'epochs': epochs,
         'optimizer': optimizer,
         'criterion': criterion,
-        's_num_features': first_batch['s_input'].shape[1],
-        'm_num_features': first_batch['m_input'].shape[1],
-        'g_in_features': first_batch['g_input'].shape[0],
+        's_num_features': first_row['s_input'].shape[1],
+        'm_num_features': first_row['m_input'].shape[1],
+        'g_in_features': first_row['g_input'].shape[0],
         'c_in_features': c_in_features,
         'c_out_in_features_1': c_out_in_features_1,
         'c_out_in_features_2': c_out_in_features_2,

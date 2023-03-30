@@ -29,14 +29,14 @@ def compute_r2_scores(observations, labels, preds):
 
 
 class Trainer:
-    def __init__(self, model, train_dataloader, val_dataloader, epochs, criterion, optimizer, device):
+    def __init__(self, model, train_dataloader, val_dataloader, epochs, criterion, optimizer, scheduler):
         self.model = model
         self.train_loader = train_dataloader
         self.val_loader = val_dataloader
         self.criterion = criterion
         self.epochs = epochs
         self.optimizer = optimizer
-        self.device = device
+        self.scheduler = scheduler
         self.timestamp = int(datetime.now().timestamp())
         self.val_best_r2_score = 0.
 
@@ -48,8 +48,8 @@ class Trainer:
         pbar = tqdm(self.train_loader, leave=False)
         for i, data in enumerate(pbar):
             keys_input = ['s_input', 'm_input', 'g_input']
-            inputs = {key: data[key].to(self.device) for key in keys_input}
-            labels = data['target'].float().to(self.device)
+            inputs = {key: data[key] for key in keys_input}
+            labels = data['target']
 
             # Zero gradients for every batch
             self.optimizer.zero_grad()
@@ -86,8 +86,8 @@ class Trainer:
         pbar = tqdm(self.val_loader, leave=False)
         for i, data in enumerate(pbar):
             keys_input = ['s_input', 'm_input', 'g_input']
-            inputs = {key: data[key].to(self.device) for key in keys_input}
-            labels = data['target'].float().to(self.device)
+            inputs = {key: data[key] for key in keys_input}
+            labels = data['target']
 
             outputs = self.model(inputs)
 
@@ -135,6 +135,8 @@ class Trainer:
 
             val_loss, val_r2_score, val_mean_r2_score = self.val_one_epoch()
             self.save(val_mean_r2_score)
+            
+            self.scheduler.step(val_mean_r2_score)
 
             wandb.log({
                 'train_loss': train_loss,
