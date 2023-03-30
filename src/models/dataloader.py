@@ -18,8 +18,17 @@ from os.path import join
 
 from utils import ROOT_DIR
 
+
 class CustomDataset(Dataset):
-    def __init__(self, s_inputs: np.ndarray, g_inputs: np.ndarray, m_inputs: np.ndarray, obs_targets: np.ndarray, augment: int, device: str):
+    def __init__(
+        self,
+        s_inputs: np.ndarray,
+        g_inputs: np.ndarray,
+        m_inputs: np.ndarray,
+        obs_targets: np.ndarray,
+        augment: int,
+        device: str,
+    ):
         """Dataset used for the dataloader.
 
         :param s_inputs: Satellite data.
@@ -38,13 +47,22 @@ class CustomDataset(Dataset):
         # Move data on the training device.
         self.augment = augment
         self.device = device
-        self.s_inputs = torch.tensor(s_inputs).to(device=self.device, dtype=torch.float32)
-        self.g_inputs = torch.tensor(g_inputs).to(device=self.device, dtype=torch.float32)
-        self.m_inputs = torch.tensor(m_inputs).to(device=self.device, dtype=torch.float32)
-        self.observations = torch.tensor(obs_targets[:, 0]).to(device=self.device, dtype=torch.float32)
-        self.targets = torch.tensor(obs_targets[:, 1]).to(device=self.device, dtype=torch.float32)
-        
-        
+        self.s_inputs = torch.tensor(s_inputs).to(
+            device=self.device, dtype=torch.float32
+        )
+        self.g_inputs = torch.tensor(g_inputs).to(
+            device=self.device, dtype=torch.float32
+        )
+        self.m_inputs = torch.tensor(m_inputs).to(
+            device=self.device, dtype=torch.float32
+        )
+        self.observations = torch.tensor(obs_targets[:, 0]).to(
+            device=self.device, dtype=torch.float32
+        )
+        self.targets = torch.tensor(obs_targets[:, 1]).to(
+            device=self.device, dtype=torch.float32
+        )
+
     def __len__(self):
         return self.s_inputs.shape[0]
 
@@ -54,17 +72,17 @@ class CustomDataset(Dataset):
         # Only the satellite data depend on the augmentation indexe
         idx_obs = idx // self.augment
         item = {
-            'observation': self.observations[[idx_obs]],
-            's_input': self.s_inputs[idx],
-            'm_input': self.m_inputs[idx_obs],
-            'g_input': self.g_inputs[idx_obs],
-            'target': self.targets[[idx_obs]]
+            "observation": self.observations[[idx_obs]],
+            "s_input": self.s_inputs[idx],
+            "m_input": self.m_inputs[idx_obs],
+            "g_input": self.g_inputs[idx_obs],
+            "target": self.targets[[idx_obs]],
         }
 
         return item
 
 
-def create_train_val_idx(xds: xr.Dataset, val_rate: float)->tuple[list, list]:
+def create_train_val_idx(xds: xr.Dataset, val_rate: float) -> tuple[list, list]:
     """Compute a stratifate Train/Val split.
 
     :param xds: Dataset used for the split.
@@ -86,9 +104,10 @@ def create_train_val_idx(xds: xr.Dataset, val_rate: float)->tuple[list, list]:
     return train_idx, val_idx
 
 
-
-def transform_data(xds: xr.Dataset, m_times: int = 120, test = False)->dict[str, np.ndarray]:
-    """Transform data from xr.Dataset to dict of np.ndarray 
+def transform_data(
+    xds: xr.Dataset, m_times: int = 120, test=False
+) -> dict[str, np.ndarray]:
+    """Transform data from xr.Dataset to dict of np.ndarray
     sorted by observation and augmentation.
 
     :param xds: The Dataset to be transformed.
@@ -102,12 +121,12 @@ def transform_data(xds: xr.Dataset, m_times: int = 120, test = False)->dict[str,
     """
     items = {}
     # Dataset sorting for compatibility with torch Dataset indexes
-    xds = xds.sortby(['ts_obs', 'ts_aug'])
-    
+    xds = xds.sortby(["ts_obs", "ts_aug"])
+
     # Create raw data
     g_arr = xds[G_COLUMNS].to_dataframe()
-    items['g_inputs'] = g_arr.values
-    
+    items["g_inputs"] = g_arr.values
+
     # Create satellite data
     # Keep only useful values and convert into numpy array
     s_arr = xds[S_COLUMNS].to_dataframe()[S_COLUMNS]
@@ -115,48 +134,54 @@ def transform_data(xds: xr.Dataset, m_times: int = 120, test = False)->dict[str,
     # Reshape axis to match index, date, features
     # TODO: set as variable the number of state_dev and features.
     s_arr = s_arr.reshape(s_arr.shape[0] // 24, 24, 8)
-    items['s_inputs'] = s_arr
+    items["s_inputs"] = s_arr
 
     # Create Meteorological data
     # time and District are the keys to link observations and meteorological data
-    df_time = xds[['time', 'District']].to_dataframe()
+    df_time = xds[["time", "District"]].to_dataframe()
     # Keep only useful data
     df_time.reset_index(inplace=True)
-    df_time = df_time[['ts_obs', 'state_dev', 'time', 'District']]
+    df_time = df_time[["ts_obs", "state_dev", "time", "District"]]
     # Meteorological data only dependend of the observation
-    df_time = df_time.groupby(['ts_obs', 'state_dev', 'District']).first()
+    df_time = df_time.groupby(["ts_obs", "state_dev", "District"]).first()
     # Take the min and max datetime of satellite data to create a daily time series of meteorological data
-    df_time.reset_index('state_dev', inplace=True)
+    df_time.reset_index("state_dev", inplace=True)
     # TODO: set as variable the number of state_dev.
-    df_time = df_time[df_time['state_dev'].isin([0, 23])]
-    df_time = df_time.pivot(columns='state_dev').droplevel(None, axis=1)
-    df_time.reset_index('District', inplace=True)
+    df_time = df_time[df_time["state_dev"].isin([0, 23])]
+    df_time = df_time.pivot(columns="state_dev").droplevel(None, axis=1)
+    df_time.reset_index("District", inplace=True)
 
-    # For each observation take m_times daily date before the 
+    # For each observation take m_times daily date before the
     # harverest date and get data with the corresponding location
     list_weather = []
     for _, series in df_time.iterrows():
-        all_dates = pd.date_range(series[0], series[23], freq='D')
+        all_dates = pd.date_range(series[0], series[23], freq="D")
         all_dates = all_dates[-m_times:]
-        m_arr = xds.sel(datetime=all_dates, name=series['District'])[M_COLUMNS].to_array().values
+        m_arr = (
+            xds.sel(datetime=all_dates, name=series["District"])[M_COLUMNS]
+            .to_array()
+            .values
+        )
         list_weather.append(m_arr.T)
 
-    items['m_inputs'] = np.asarray(list_weather)
+    items["m_inputs"] = np.asarray(list_weather)
 
     # If test create the target array with 0 instead of np.nan
     if test:
         df = xds[TARGET_TEST].to_dataframe().reset_index()
         df[TARGET_TEST] = 0
-        items['obs_targets'] = df.to_numpy()
+        items["obs_targets"] = df.to_numpy()
     else:
-        items['obs_targets'] = xds[TARGET].to_dataframe().reset_index().to_numpy()
+        items["obs_targets"] = xds[TARGET].to_dataframe().reset_index().to_numpy()
 
-    items['augment'] = xds['ts_aug'].values.shape[0]
+    items["augment"] = xds["ts_aug"].values.shape[0]
 
     return items
 
 
-def get_dataloaders(batch_size:int, val_rate: float, device:str)-> tuple[DataLoader, DataLoader, DataLoader]:
+def get_dataloaders(
+    batch_size: int, val_rate: float, device: str
+) -> tuple[DataLoader, DataLoader, DataLoader]:
     """Generate Train / Validation / Test Torch Dataloader.
 
     :param batch_size: Batch size of Dataloader.
@@ -169,8 +194,8 @@ def get_dataloaders(batch_size:int, val_rate: float, device:str)-> tuple[DataLoa
     :rtype: tuple[DataLoader, DataLoader, DataLoader]
     """
     # Read the dataset processed
-    dataset_path = join(ROOT_DIR, 'data', 'processed', FOLDER, 'train_enriched.nc')
-    xdf_train = xr.open_dataset(dataset_path, engine='scipy')
+    dataset_path = join(ROOT_DIR, "data", "processed", FOLDER, "train_enriched.nc")
+    xdf_train = xr.open_dataset(dataset_path, engine="scipy")
 
     # Create a Train / Validation split
     train_idx, val_idx = create_train_val_idx(xdf_train, val_rate)
@@ -179,25 +204,20 @@ def get_dataloaders(batch_size:int, val_rate: float, device:str)-> tuple[DataLoa
     items = transform_data(train_array)
     train_dataset = CustomDataset(**items, device=device)
     # Create the Dataloader
-    train_dataloader = DataLoader(train_dataset,
-                                  batch_size=batch_size,
-                                  drop_last=True,
-                                  shuffle=True)
+    train_dataloader = DataLoader(
+        train_dataset, batch_size=batch_size, drop_last=True, shuffle=True
+    )
 
     # ?: Make a function to create each dataloader
     val_array = xdf_train.sel(ts_obs=val_idx)
     items = transform_data(val_array)
     val_dataset = CustomDataset(**items, device=device)
-    val_dataloader = DataLoader(val_dataset,
-                                batch_size=batch_size,
-                                drop_last=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, drop_last=True)
 
-    dataset_path = join(ROOT_DIR, 'data', 'processed', FOLDER, 'test_enriched.nc')
-    xdf_test = xr.open_dataset(dataset_path, engine='scipy')
+    dataset_path = join(ROOT_DIR, "data", "processed", FOLDER, "test_enriched.nc")
+    xdf_test = xr.open_dataset(dataset_path, engine="scipy")
     items = transform_data(xdf_test, test=True)
     test_dataset = CustomDataset(**items, device=device)
-    test_dataloader = DataLoader(test_dataset,
-                                 batch_size=batch_size,
-                                 drop_last=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, drop_last=True)
 
     return train_dataloader, val_dataloader, test_dataloader

@@ -18,8 +18,7 @@ sys.path.insert(1, parent)
 
 from tqdm import tqdm
 
-from src.constants import (FOLDER, G_COLUMNS, M_COLUMNS, S_COLUMNS, TARGET,
-                           TARGET_TEST)
+from src.constants import FOLDER, G_COLUMNS, M_COLUMNS, S_COLUMNS, TARGET, TARGET_TEST
 from utils import ROOT_DIR
 
 

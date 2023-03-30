@@ -1,11 +1,11 @@
 import warnings
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 import os
 import sys
 
-parent = os.path.abspath('.')
+parent = os.path.abspath(".")
 sys.path.insert(1, parent)
 
 import torch
@@ -27,16 +27,16 @@ def main():
     model.to(device)
 
     criterion = nn.MSELoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'])
+    optimizer = torch.optim.AdamW(model.parameters(), lr=config["learning_rate"])
 
     train_config = {
-        'model': model,
-        'train_dataloader': train_dataloader,
-        'val_dataloader': val_dataloader,
-        'optimizer': optimizer,
-        'criterion': criterion,
-        'epochs': config['epochs'],
-        'device': device
+        "model": model,
+        "train_dataloader": train_dataloader,
+        "val_dataloader": val_dataloader,
+        "optimizer": optimizer,
+        "criterion": criterion,
+        "epochs": config["epochs"],
+        "device": device,
     }
 
     trainer = Trainer(**train_config)
@@ -45,8 +45,8 @@ def main():
 
 def init_wandb():
     wandb.init(
-        project='winged-bull',
-        group='crop-forecasting',
+        project="winged-bull",
+        group="crop-forecasting",
     )
 
     epochs = wandb.config.epochs
@@ -64,28 +64,30 @@ def init_wandb():
     m_hidden_size = wandb.config.m_hidden_size
     train_dataloader, val_dataloader, _ = get_dataloaders(batch_size, 0.2, get_device())
     first_batch = train_dataloader.dataset[0]
-    c_in_features = s_hidden_size - 2 + m_hidden_size - 2 + first_batch['g_input'].shape[0]
+    c_in_features = (
+        s_hidden_size - 2 + m_hidden_size - 2 + first_batch["g_input"].shape[0]
+    )
 
     config = {
-        'batch_size': batch_size,
-        's_hidden_size': s_hidden_size,
-        's_num_layers': s_num_layers,
-        'm_hidden_size': m_hidden_size,
-        'm_num_layers': m_num_layers,
-        'learning_rate': learning_rate,
-        'lstm_dropout': lstm_dropout,
-        'fc_dropout': fc_dropout,
-        'epochs': epochs,
-        'optimizer': optimizer,
-        'criterion': criterion,
-        's_num_features': first_batch['s_input'].shape[1],
-        'm_num_features': first_batch['m_input'].shape[1],
-        'g_in_features': first_batch['g_input'].shape[0],
-        'c_in_features': c_in_features,
-        'c_out_in_features_1': c_out_in_features_1,
-        'c_out_in_features_2': c_out_in_features_2,
-        'train_size': len(train_dataloader),
-        'val_size': len(val_dataloader),
+        "batch_size": batch_size,
+        "s_hidden_size": s_hidden_size,
+        "s_num_layers": s_num_layers,
+        "m_hidden_size": m_hidden_size,
+        "m_num_layers": m_num_layers,
+        "learning_rate": learning_rate,
+        "lstm_dropout": lstm_dropout,
+        "fc_dropout": fc_dropout,
+        "epochs": epochs,
+        "optimizer": optimizer,
+        "criterion": criterion,
+        "s_num_features": first_batch["s_input"].shape[1],
+        "m_num_features": first_batch["m_input"].shape[1],
+        "g_in_features": first_batch["g_input"].shape[0],
+        "c_in_features": c_in_features,
+        "c_out_in_features_1": c_out_in_features_1,
+        "c_out_in_features_2": c_out_in_features_2,
+        "train_size": len(train_dataloader),
+        "val_size": len(val_dataloader),
     }
 
     return config, train_dataloader, val_dataloader
@@ -93,14 +95,14 @@ def init_wandb():
 
 def get_device():
     if torch.cuda.is_available():
-        device = 'cuda'
+        device = "cuda"
     elif torch.backends.mps.is_available():
-        device = 'mps'
+        device = "mps"
     else:
         raise Exception("None accelerator available")
 
     return device
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

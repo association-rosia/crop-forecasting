@@ -3,9 +3,13 @@ import sys
 from typing import Union
 
 import xarray as xr
-from sklearn.preprocessing import (MinMaxScaler, PowerTransformer,
-                                   QuantileTransformer, RobustScaler,
-                                   StandardScaler)
+from sklearn.preprocessing import (
+    MinMaxScaler,
+    PowerTransformer,
+    QuantileTransformer,
+    RobustScaler,
+    StandardScaler,
+)
 
 parent = os.path.abspath("../features")
 sys.path.insert(1, parent)

@@ -14,7 +14,7 @@ import xarray as xr
 from odc.stac import stac_load
 from tqdm import tqdm
 
-parent = os.path.abspath('.')
+parent = os.path.abspath(".")
 sys.path.insert(1, parent)
 
 from os.path import join
@@ -64,7 +64,9 @@ def create_folders() -> str:
         degree = str(round(DEGREE, 5)).replace(".", "-")
         save_folder = join(ROOT_DIR, "data", "external", "satellite", f"fixed_{degree}")
     elif SIZE == "adaptative":
-        save_folder = join(ROOT_DIR, "data", "external", "satellite", f"adaptative_factor_{FACTOR}")
+        save_folder = join(
+            ROOT_DIR, "data", "external", "satellite", f"adaptative_factor_{FACTOR}"
+        )
 
     os.makedirs(save_folder, exist_ok=True)
     return save_folder
