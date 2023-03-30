@@ -1,6 +1,6 @@
 import os
 import sys
-
+from  typing import Tuple, List
 import numpy as np
 import pandas as pd
 import torch
@@ -82,7 +82,7 @@ class CustomDataset(Dataset):
         return item
 
 
-def create_train_val_idx(xds: xr.Dataset, val_rate: float) -> tuple[list, list]:
+def create_train_val_idx(xds: xr.Dataset, val_rate: float) -> Tuple[List, List]:
     """Compute a stratifate Train/Val split.
 
     :param xds: Dataset used for the split.
