@@ -28,14 +28,6 @@ NUM_AUGMENT = 40
 MAX_AUGMENT = 5
 DEGREE = 0.0014589825157734703  # = ha_to_degree(2.622685) # Field size (ha) mean = 2.622685 (train + test)
 
-# Dictionnary for matching api bands name and natural bands name
-dict_band_name = {
-    "B05": "rededge1",
-    "B06": "rededge2",
-    "B07": "rededge3",
-    "B11": "swir",
-}
-
 
 def ha_to_degree(field_size: float) -> float:  # Field_size (ha)
     """
@@ -101,12 +93,10 @@ def get_bbox(
     return min_longitude, min_latitude, max_longitude, max_latitude
 
 
-def get_time_period(havest_date: str, history_days: int) -> str:
-    havest_datetime = datetime.strptime(havest_date, "%d-%m-%Y")
-    sowing_datetime = havest_datetime - timedelta(days=history_days)
-    return (
-        f'{sowing_datetime.strftime("%Y-%m-%d")}/{havest_datetime.strftime("%Y-%m-%d")}'
-    )
+def get_time_period(harvest_date: str, history_days: int) -> str:
+    harvest_datetime = datetime.strptime(harvest_date, "%d-%m-%Y")
+    sowing_datetime = harvest_datetime - timedelta(days=history_days)
+    return f'{sowing_datetime.strftime("%Y-%m-%d")}/{harvest_datetime.strftime("%Y-%m-%d")}'
 
 
 def get_data(
@@ -126,21 +116,22 @@ def get_data(
     return data
 
 
-def process_data(xds: xr.Dataset, history_dates: int) -> xr.Dataset:
-    xds = xds.drop(["spatial_ref", "SCL"])
-    xds = xds.mean(dim=["latitude", "longitude"], skipna=True)
-    xds = xds.sortby("time", ascending=False)
-    xds = xds.isel(time=slice(None, history_dates))
-    xds["time"] = xds["time"].dt.strftime("%Y-%m-%d")
-    xds["state_dev"] = ("time", np.arange(history_dates)[::-1])
-    xds = xds.swap_dims({"time": "state_dev"})
-    xds = xds.rename_vars(dict_band_name)
-    return xds
-
-
 def save_data(
     row: pd.Series, history_days: int, history_dates: int, resolution: int
 ) -> xr.Dataset:
+    """Get Satellite Dataset and process it to be used.
+
+    :param row: Series representing an observation.
+    :type row: pd.Series
+    :param history_days: Number of day to take satellite data before the harvest.
+    :type history_days: int
+    :param history_dates: Number of satellite data to take before the harvest
+    :type history_dates: int
+    :param resolution: Resolution of the satellite image, defaults to 10.
+    :type resolution: int
+    :return: Dataset processed of an observation.
+    :rtype: xr.Dataset
+    """
     scale = resolution / 111320.0
     bands = ["red", "green", "blue", "B05", "B06", "B07", "nir", "B11", "SCL"]
 
@@ -148,9 +139,9 @@ def save_data(
     latitude = row["Latitude"]
     field_size = float(row["Field size (ha)"])
     bbox = get_bbox(longitude, latitude, field_size)
-
-    havest_date = row["Date of Harvest"]
-    time_period = get_time_period(havest_date, history_days)
+    # Get the time periode to retrieve statellite data
+    harvest_date = row["Date of Harvest"]
+    time_period = get_time_period(harvest_date, history_days)
 
     xds = get_data(bbox, time_period, bands, scale)
     # Cloud mask on SCL value to only keep clear data
@@ -163,29 +154,79 @@ def save_data(
         & (xds.SCL != 9)
         & (xds.SCL != 10)
     )
-
     xds = xds.where(cloud_mask)
-    xds = process_data(xds, history_dates)
+    # Keep only useful data
+    xds = xds.drop(["spatial_ref", "SCL"])
+    # Compute the mean of each image by localisation
+    xds = xds.mean(dim=["latitude", "longitude"], skipna=True)
+    # Sort data by time
+    xds = xds.sortby("time", ascending=False)
+    # Keep only the history_dates oldest data
+    xds = xds.isel(time=slice(None, history_dates))
+    # Format data
+    xds["time"] = xds["time"].dt.strftime("%Y-%m-%d")
+    # Create a Variable named state_dev which reprensent
+    # the number of development state keep and set it as dimension
+    xds["state_dev"] = ("time", np.arange(history_dates)[::-1])
+    xds = xds.swap_dims({"time": "state_dev"})
+    # Rename bands api name by more readable name
+    # Dictionnary for matching api bands name and natural bands name
+    dict_band_name = {
+        "B05": "rededge1",
+        "B06": "rededge2",
+        "B07": "rededge3",
+        "B11": "swir",
+    }
+    xds = xds.rename_vars(dict_band_name)
 
     return xds
 
 
 def save_data_app(
-    index_row, history_days: int = 130, history_dates: int = 24, resolution: int = 10
+    index_row: tuple[str, pd.Series],
+    history_days: int = 130,
+    history_dates: int = 24,
+    resolution: int = 10,
 ) -> xr.Dataset:
-    list_xds = []
+    """Get Satellite Datasets from an observation and concat them to one.
 
+    :param index_row: Tuple of index string and a Series representing an observation.
+    :type index_row: tuple[str, pd.Series]
+    :param history_days: Number of day to take satellite data before the harvest, defaults to 130.
+    :type history_days: int, optional
+    :param history_dates: Number of satellite data to take before the harvest, defaults to 24.
+    :type history_dates: int, optional
+    :param resolution: Resolution of the satellite image, defaults to 10.
+    :type resolution: int, optional
+    :return: Concatenate Dataset of one observation.
+    :rtype: xr.Dataset
+    """
+    list_xds = []
+    # For the number of data augmentation desired get satellite data
+    # and append it into a list
     for i in range(NUM_AUGMENT):
         xds = save_data(index_row[1], history_days, history_dates, resolution)
         xds = xds.expand_dims({"ts_aug": [i]})
         list_xds.append(xds)
+    # Concat list of Dataset into a single one representing one observation * NUM_AUGMENT
     xds: xr.Dataset = xr.concat(list_xds, dim="ts_aug")
+    # Create a new dimenstion called ts_obs representing the index of the observation.
     xds = xds.expand_dims({"ts_obs": [index_row[0]]})
 
     return xds
 
 
 def init_df(df: pd.DataFrame, path: str) -> tuple[pd.DataFrame, list]:
+    """Check for missing observations on the dataset and make
+    and filter the dataframe to only keep the missing ones.
+
+    :param df: DataFrame of all observations.
+    :type df: pd.DataFrame
+    :param path: Dataset path of already retrieves data.
+    :type path: str
+    :return: Dataframe filtered and list with one Dataset if some data was already retrieves.
+    :rtype: tuple[pd.DataFrame, list]
+    """
     list_data = []
     df.index.name = "ts_obs"
 
@@ -200,6 +241,8 @@ def init_df(df: pd.DataFrame, path: str) -> tuple[pd.DataFrame, list]:
 
 
 class Checkpoint(Exception):
+    """Exception class to save data during the retrieval."""
+
     def __init__(self):
         pass
 
@@ -229,13 +272,19 @@ def make_data(path: str, save_file: str) -> bool:
     print(f'\nRetrieve SAR data from {path.split("/")[-1]}...')
     try:
         with mp.Pool(4) as pool:
+            # Multiprocessing data retrieval.
+            # Create a list of dataset with all dataset represent one obervation
+            # multiply by the number of augmentation desired.
             for xds in tqdm(pool.imap(save_data_app, df.iterrows()), total=len(df)):
                 list_data.append(xds)
                 if time.time() - start > 3600:
+                    # Each houre raise a Checkpoint Exception to stop the process and save the data
                     raise Checkpoint("Checkpoint.")
     except Checkpoint as c:
+        # If the error is a checkpoint set the boolean to True
         checkpoint = True
     finally:
+        # Concat all Dataset to one and save it.
         data = xr.concat(list_data, dim="ts_obs")
         print(f'\nSave SAR data from {path.split("/")[-1]}...')
         data.to_netcdf(save_file, engine="scipy")
@@ -248,12 +297,15 @@ if __name__ == "__main__":
 
     checkpoint = True
     while checkpoint:
+        # While make data finish because of a checkpoint exception
+        # Restarts satellite data retrieval.
         train_path = join(ROOT_DIR, "data", "raw", "train.csv")
         train_file = join(save_folder, "train.nc")
         checkpoint = make_data(train_path, train_file)
 
     checkpoint = True
     while checkpoint:
+        # Same for Test data.
         test_path = join(ROOT_DIR, "data", "raw", "test.csv")
         test_file = join(save_folder, "test.nc")
         checkpoint = make_data(test_path, test_file)
