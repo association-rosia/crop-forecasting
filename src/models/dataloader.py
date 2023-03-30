@@ -1,6 +1,6 @@
 import os
 import sys
-from  typing import Tuple, List
+from  typing import Tuple, List, Dict
 import numpy as np
 import pandas as pd
 import torch
@@ -106,7 +106,7 @@ def create_train_val_idx(xds: xr.Dataset, val_rate: float) -> Tuple[List, List]:
 
 def transform_data(
     xds: xr.Dataset, m_times: int = 120, test=False
-) -> dict[str, np.ndarray]:
+) -> Dict[str, np.ndarray]:
     """Transform data from xr.Dataset to dict of np.ndarray
     sorted by observation and augmentation.
 
@@ -181,7 +181,7 @@ def transform_data(
 
 def get_dataloaders(
     batch_size: int, val_rate: float, device: str
-) -> tuple[DataLoader, DataLoader, DataLoader]:
+) -> Tuple[DataLoader, DataLoader, DataLoader]:
     """Generate Train / Validation / Test Torch Dataloader.
 
     :param batch_size: Batch size of Dataloader.
