@@ -20,7 +20,7 @@ from utils import ROOT_DIR
 
 
 
-class JupyterDataset(Dataset):
+class CustomDataset(Dataset):
     def __init__(self, s_inputs, g_inputs, m_inputs, obs_targets, augment, device):
         self.augment = augment
         self.device = device
@@ -110,7 +110,7 @@ def get_dataloaders(batch_size, val_rate, device):  # 4 * num_GPU
     train_array = xdf_train.sel(ts_obs=train_idx)
     items = transform_data(train_array)
     items['device'] = device
-    train_dataset = JupyterDataset(**items)
+    train_dataset = CustomDataset(**items)
     train_dataloader = DataLoader(train_dataset,
                                   batch_size=batch_size,
                                   drop_last=True,
@@ -119,7 +119,7 @@ def get_dataloaders(batch_size, val_rate, device):  # 4 * num_GPU
     val_array = xdf_train.sel(ts_obs=val_idx)
     items = transform_data(val_array)
     items['device'] = device
-    val_dataset = JupyterDataset(**items)
+    val_dataset = CustomDataset(**items)
     val_dataloader = DataLoader(val_dataset,
                                 batch_size=batch_size,
                                 drop_last=True)
@@ -128,7 +128,7 @@ def get_dataloaders(batch_size, val_rate, device):  # 4 * num_GPU
     xdf_test = xr.open_dataset(dataset_path, engine='scipy')
     items = transform_data(xdf_test, test=True)
     items['device'] = device
-    test_dataset = JupyterDataset(**items)
+    test_dataset = CustomDataset(**items)
     test_dataloader = DataLoader(test_dataset,
                                  batch_size=batch_size,
                                  drop_last=True)
