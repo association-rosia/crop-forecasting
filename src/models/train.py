@@ -64,7 +64,7 @@ def init_wandb():
     s_num_layers = wandb.config.s_num_layers
     s_hidden_size = wandb.config.s_hidden_size
     m_hidden_size = wandb.config.m_hidden_size
-    train_dataloader, val_dataloader, _ = get_dataloaders(batch_size, 0.2)
+    train_dataloader, val_dataloader, _ = get_dataloaders(batch_size, 0.2, get_device())
     first_row = train_dataloader.dataset[0]
     
     c_in_features = s_hidden_size - 2 + m_hidden_size - 2 + first_row['g_input'].shape[0]
