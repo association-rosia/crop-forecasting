@@ -29,14 +29,13 @@ def compute_r2_scores(observations, labels, preds):
 
 
 class Trainer:
-    def __init__(self, model, train_dataloader, val_dataloader, epochs, criterion, optimizer, scheduler, device):
+    def __init__(self, model, train_dataloader, val_dataloader, epochs, criterion, optimizer, device):
         self.model = model
         self.train_loader = train_dataloader
         self.val_loader = val_dataloader
         self.criterion = criterion
         self.epochs = epochs
         self.optimizer = optimizer
-        self.scheduler = scheduler
         self.device = device
         self.timestamp = int(datetime.now().timestamp())
         self.val_best_r2_score = 0.
@@ -135,7 +134,6 @@ class Trainer:
             train_loss = self.train_one_epoch()
 
             val_loss, val_r2_score, val_mean_r2_score = self.val_one_epoch()
-            self.scheduler.step(val_loss)
             self.save(val_mean_r2_score)
 
             wandb.log({

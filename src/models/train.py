@@ -28,16 +28,12 @@ def main():
 
     criterion = nn.MSELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'])
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                           patience=config['scheduler_patience'],
-                                                           verbose=True)
 
     train_config = {
         'model': model,
         'train_dataloader': train_dataloader,
         'val_dataloader': val_dataloader,
         'optimizer': optimizer,
-        'scheduler': scheduler,
         'criterion': criterion,
         'epochs': config['epochs'],
         'device': device
@@ -60,7 +56,6 @@ def init_wandb():
     optimizer = wandb.config.optimizer
     batch_size = wandb.config.batch_size
     learning_rate = wandb.config.learning_rate
-    scheduler_patience = wandb.config.scheduler_patience
     c_out_in_features_1 = wandb.config.c_out_in_features_1
     c_out_in_features_2 = wandb.config.c_out_in_features_2
     m_num_layers = wandb.config.m_num_layers
@@ -77,7 +72,6 @@ def init_wandb():
         'm_hidden_size': m_hidden_size,
         'm_num_layers': m_num_layers,
         'learning_rate': learning_rate,
-        'scheduler_patience': scheduler_patience,
         'lstm_dropout': lstm_dropout,
         'fc_dropout': fc_dropout,
         'epochs': epochs,

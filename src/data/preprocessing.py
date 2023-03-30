@@ -26,17 +26,18 @@ from utils import ROOT_DIR
 
 # Scaler class used on ML exploration
 class Scaler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
+    """Scale an array. The method depend of the scaler given.
+
+    :param scaler: Scaler used, defaults to StandardScaler()
+    :type scaler: Union[MinMaxScaler, StandardScaler, RobustScaler, QuantileTransformer], optional
+    """
     def __init__(
         self,
         scaler: Union[
             MinMaxScaler, StandardScaler, RobustScaler, QuantileTransformer
         ] = StandardScaler(),
     ) -> None:
-        """Scale an array. The method depend of the scaler given.
-
-        :param scaler: Scaler used, defaults to StandardScaler()
-        :type scaler: Union[MinMaxScaler, StandardScaler, RobustScaler, QuantileTransformer], optional
-        """
+        
         self.scaler = scaler
 
     def fit(self, X: pd.DataFrame, y=None) -> object:
