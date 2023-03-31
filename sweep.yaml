@@ -14,7 +14,7 @@ program: src/models/train.py
 parameters:
   epochs:
     distribution: constant
-    value: 30
+    value: 25
 
   optimizer:
     distribution: constant
@@ -32,49 +32,52 @@ parameters:
     distribution: constant
     value: 2
 
+  batch_size:
+    distribution: constant
+    value: 16
+
   learning_rate:
     distribution: uniform
-    min: 1e-05
-    max: 1e-03
+    min: 5e-05
+    max: 2e-04
 
   scheduler_patience:
     distribution: int_uniform
-    min: 3
-    max: 10
-
-  batch_size:
-    distribution: categorical
-    values: [8, 16, 32]
+    min: 4
+    max: 6
 
   lstm_dropout:
-    distribution: categorical
-    values: [0.1 , 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2,
-             0.21, 0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28, 0.29, 0.3, 0.31,
-             0.32, 0.33, 0.34, 0.35, 0.36, 0.37, 0.38, 0.39, 0.4]
+    distribution: uniform
+    min: 0.45
+    max: 0.55
+
+  cnn_dropout:
+    distribution: uniform
+    min: 0.45
+    max: 0.55
 
   fc_dropout:
-    distribution: categorical
-    values: [0.5 , 0.51, 0.52, 0.53, 0.54, 0.55, 0.56, 0.57, 0.58, 0.59, 0.6,
-            0.61, 0.62, 0.63, 0.64, 0.65, 0.66, 0.67, 0.68, 0.69, 0.7, 0.71,
-            0.72, 0.73, 0.74, 0.75, 0.76, 0.77, 0.78, 0.79, 0.8]
+    distribution: uniform
+    min: 0.45
+    max: 0.55
 
   s_hidden_size:
     distribution: int_uniform
-    min: 64
-    max: 256
+    min: 100
+    max: 150
 
   m_hidden_size:
     distribution: int_uniform
-    min: 64
-    max: 256
+    min: 100
+    max: 150
 
   c_out_in_features_1:
     distribution: int_uniform
-    min: 128
-    max: 512
+    min: 150
+    max: 200
 
   c_out_in_features_2:
     distribution: int_uniform
-    min: 128
-    max: 512
+    min: 150
+    max: 200
 

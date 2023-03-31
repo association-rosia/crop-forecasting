@@ -134,9 +134,8 @@ class Trainer:
             train_loss = self.train_one_epoch()
 
             val_loss, val_r2_score, val_mean_r2_score = self.val_one_epoch()
+            self.scheduler.step(val_loss)
             self.save(val_mean_r2_score)
-            
-            self.scheduler.step(val_mean_r2_score)
 
             wandb.log({
                 'train_loss': train_loss,

@@ -25,6 +25,7 @@ class CustomModel(nn.Module):
         self.c_out_in_features_2 = config['c_out_in_features_2']
 
         self.lstm_p = config['lstm_dropout']
+        self.cnn_p = config['cnn_dropout']
         self.fc_p = config['fc_dropout']
 
         self.s_lstm = nn.LSTM(self.s_num_features, self.s_hidden_size, self.s_num_layers, batch_first=True)
@@ -46,6 +47,7 @@ class CustomModel(nn.Module):
         self.tanh = nn.Tanh()
         self.relu = nn.ReLU()
         self.lstm_dropout = nn.Dropout(self.lstm_p)
+        self.cnn_dropout = nn.Dropout(self.cnn_p)
         self.fc_dropout = nn.Dropout(self.fc_p)
 
     def forward(self, x: dict) -> torch.Tensor:
@@ -71,6 +73,7 @@ class CustomModel(nn.Module):
         s_output = self.s_cnn(s_output)
         s_output = self.s_bn_cnn(torch.squeeze(s_output))
         s_output = self.relu(s_output)
+        s_output = self.cnn_dropout(s_output)
 
         # Meteorological LSTM
         m_output, _ = self.m_lstm(m_input)
@@ -83,6 +86,7 @@ class CustomModel(nn.Module):
         m_output = self.m_cnn(m_output)
         m_output = self.m_bn_cnn(torch.squeeze(m_output))
         m_output = self.relu(m_output)
+        m_output = self.cnn_dropout(m_output)
 
         # Concatenate inputs
         c_input = torch.cat((s_output, m_output, g_input), 1)
