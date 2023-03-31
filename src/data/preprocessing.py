@@ -24,6 +24,7 @@ from sklearn.base import BaseEstimator, OneToOneFeatureMixin, TransformerMixin
 from src.constants import G_COLUMNS, M_COLUMNS, S_COLUMNS
 from utils import ROOT_DIR
 
+
 # Scaler class used on ML exploration
 class Scaler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
     """Scale an array. The method depend of the scaler given.
