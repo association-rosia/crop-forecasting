@@ -18,7 +18,7 @@ from dataloader import get_dataloaders
 from src.constants import TARGET, TARGET_TEST
 from utils import ROOT_DIR
 
-MODEL = '0-65421_model_1680057966.pt'
+MODEL = '0-65983_model_1680214126.pt'
 
 
 def rounded_yield(x: float, crop_yields: list) -> float:
@@ -119,7 +119,7 @@ class Evaluator:
         
 if __name__ == '__main__':
     device = get_device()
-    _, _, test_dataloader = get_dataloaders(batch_size=64, val_rate=0.2)
+    _, _, test_dataloader = get_dataloaders(batch_size=64, val_rate=0.2, device=device)
     
     evaluator = Evaluator(test_dataloader, device)
     
