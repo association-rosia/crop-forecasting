@@ -1,0 +1,66 @@
+method: bayes
+
+metric:
+  name: val_r2_score
+  goal: maximize
+
+program: src/models/ml/train.py
+
+parameters:
+
+  n_splits:
+    distribution: constant
+    value: 10
+
+  n_components:
+    distribution: constant
+    value: mle
+  
+  smoother:
+    distribution: categorical
+    values: [None, savgol]
+
+  aggregate:
+    distribution: categorical
+    values: [True, False]
+
+  weather:
+    distribution: categorical
+    values: [True, False]
+
+  vi:
+    distribution: categorical
+    values: [True, False]
+
+  pca:
+    distribution: categorical
+    values: [True, False]
+
+  n_estimators:
+    distribution: categorical
+    values: [100,  200,  300,  400,  500,  600,  700,  800,  900, 1000]
+
+  colsample_bytree:
+    distribution: categorical
+    values: [0.1, 0.2, 0.3, 0.4, 0.5]
+
+  colsample_bylevel:
+    distribution: categorical
+    values: [0.1, 0.2, 0.3, 0.4, 0.5]
+
+  colsample_bynode:
+    distribution: categorical
+    values: [0.1, 0.2, 0.3, 0.4, 0.5]
+
+  subsample:
+    distribution: categorical
+    values: [0.1, 0.2, 0.3, 0.4, 0.5]
+
+  max_depth:
+    distribution: categorical
+    values: [2, 3, 4, 5, 6, 7, 8, 9, 10]
+  
+  learning_rate:
+    distribution: categorical
+    values: [0.001, 0.01, 0.1, 0.2, 0.3]
+
