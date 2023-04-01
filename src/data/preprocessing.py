@@ -10,10 +10,14 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.signal import savgol_filter
-from sklearn.preprocessing import (MinMaxScaler, QuantileTransformer,
-                                   RobustScaler, StandardScaler)
+from sklearn.preprocessing import (
+    MinMaxScaler,
+    QuantileTransformer,
+    RobustScaler,
+    StandardScaler,
+)
 
-parent = os.path.abspath('.')
+parent = os.path.abspath(".")
 sys.path.insert(1, parent)
 
 from os.path import join
@@ -25,10 +29,21 @@ from utils import ROOT_DIR
 
 
 class Sorter(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
+    """Sort dataset to align dataset samples with labels samples."""
+
     def __init__(self) -> None:
         pass
 
-    def fit(self, X, y=None):
+    def fit(self, X=None, y=None) -> object:
+        """_summary_
+
+        :param X: Ignored
+        :type X: None
+        :param y: Ignored
+        :type y: None
+        :return: self
+        :rtype: object
+        """
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
@@ -37,16 +52,17 @@ class Sorter(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
 # Convertor class used on ML exploration
 class Convertor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
-    def __init__(self, agg: bool = None, weather: bool = True, vi: bool = True) -> None:
-        """Used to transform the xarray.Dataset into pandas.DataFrame and reduce the dimention and/or tranform it.
+    """Used to transform the xarray.Dataset into pandas.DataFrame and reduce the dimention and/or tranform it.
 
-        :param agg: If True then replace features with their aggregations along the state_dev axis (agg = min, mean, max), defaults to None
-        :type agg: bool, optional
-        :param weather: If False then remove weather data from the Dataset, defaults to True
-        :type weather: bool, optional
-        :param vi: If False then remove vegetable indices from the Dataset, defaults to True
-        :type vi: bool, optional
-        """
+    :param agg: If True then replace features with their aggregations along the state_dev axis (agg = min, mean, max), defaults to None
+    :type agg: bool, optional
+    :param weather: If False then remove weather data from the Dataset, defaults to True
+    :type weather: bool, optional
+    :param vi: If False then remove vegetable indices from the Dataset, defaults to True
+    :type vi: bool, optional
+    """
+
+    def __init__(self, agg: bool = None, weather: bool = True, vi: bool = True) -> None:
         self.agg = agg
         self.weather = weather
         self.vi = vi
@@ -96,13 +112,13 @@ class Convertor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         X["agg"] = ["mean", "max", "min"]
         return X
 
-    def fit(self, X: xr.Dataset = None, y=None) -> object:
+    def fit(self, X=None, y=None) -> object:
         """Identity function.
 
-        :param X: Ignored, defaults to None
-        :type X: xr.Dataset, optional
-        :param y: Ignored, defaults to None
-        :type y: None, optional
+        :param X: Ignored
+        :type X: None
+        :param y: Ignored
+        :type y: None
         :return: Convertor.
         :rtype: object
         """
@@ -133,12 +149,13 @@ class Convertor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
 
 class Smoother(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
-    def __init__(self, mode: str = "savgol") -> None:
-        """Smooth Vegetable Indice Data.
+    """Smooth Vegetable Indice Data.
 
-        :param mode: methode used to smooth vi data, None to not perform smoothing during , defaults to "savgol"
-        :type mode: str, optional
-        """
+    :param mode: methode used to smooth vi data, None to not perform smoothing during , defaults to "savgol"
+    :type mode: str, optional
+    """
+
+    def __init__(self, mode: str = "savgol") -> None:
         self.mode = mode
 
     def smooth_savgol(self, ds: xr.Dataset) -> xr.Dataset:
@@ -176,13 +193,27 @@ class Smoother(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             X = self.smooth_savgol(X)
 
         return X
-    
-    
+
+
 class Filler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
+    """Fill dataset using the mean of each group of observation for a given date.
+    For the reaining data use the mean of the dataset for a given developpment state.
+    """
+
     def __init__(self) -> None:
         self.values = None
 
-    def fit(self, X: xr.Dataset, y=None):
+    def fit(self, X: xr.Dataset, y=None) -> object:
+        """Compute mean by developpement state to be used for later filling.
+
+        :param X: The data used to compute mean by developpement state used for later filling.
+        :type X: xr.Dataset
+        :param y: Ignored
+        :type y: None
+        :return: self
+        :rtype: object
+        """
+
         def replaceinf(arr: np.ndarray) -> np.ndarray:
             if np.issubdtype(arr.dtype, np.number):
                 arr[np.isinf(arr)] = np.nan
@@ -191,16 +222,26 @@ class Filler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         # replace infinite value by na
         xr.apply_ufunc(replaceinf, X[S_COLUMNS])
         # compute mean of all stage of developpement for each cluster obsevation
-        self.values = X[S_COLUMNS].mean(dim="ts_aug", skipna=True).mean(dim="ts_obs", skipna=True)
+        self.values = (
+            X[S_COLUMNS].mean(dim="ts_aug", skipna=True).mean(dim="ts_obs", skipna=True)
+        )
 
         return self
 
     def transform(self, X: xr.Dataset) -> xr.Dataset:
+        """Performs the filling of missing values
+
+        :param X: The dataset used to fill.
+        :type X: xr.Dataset
+        :return: Transformed dataset.
+        :rtype: xr.Dataset
+        """
+
         def replaceinf(arr: np.ndarray) -> np.ndarray:
             if np.issubdtype(arr.dtype, np.number):
                 arr[np.isinf(arr)] = np.nan
             return arr
-        
+
         # replace infinite value by na
         xr.apply_ufunc(replaceinf, X[S_COLUMNS])
         # compute mean of all stage of developpement and all obsevation
