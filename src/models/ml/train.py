@@ -87,7 +87,7 @@ def init_pipeline() -> Pipeline:
         ("sorter", Sorter()),
     ]
 
-    if wandb.config.dim_reduct == "PCA":
+    if wandb.config.dim_reduction == "PCA":
         steps_pipeline.append(("scaler", StandardScaler()))
         steps_pipeline.append(("dim_reductor", PCA(n_components="mle")))
 
