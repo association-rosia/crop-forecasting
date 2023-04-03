@@ -10,19 +10,11 @@ parameters:
 
   n_splits:
     distribution: constant
-    value: 10
+    value: 5
 
-  n_components:
-    distribution: constant
-    value: mle
-  
-  smoother:
+  dim_reduction:
     distribution: categorical
-    values: [None, savgol]
-
-  aggregate:
-    distribution: categorical
-    values: [True, False]
+    values: ['Aggregate', 'PCA']
 
   weather:
     distribution: categorical
@@ -30,37 +22,44 @@ parameters:
 
   vi:
     distribution: categorical
-    values: [True, False]
-
-  pca:
-    distribution: categorical
-    values: [True, False]
+    values: ['savgol', True, False]
 
   n_estimators:
-    distribution: categorical
-    values: [100,  200,  300,  400,  500,  600,  700,  800,  900, 1000]
+    distribution: int_uniform
+    min: 100
+    max: 1000
 
   colsample_bytree:
-    distribution: categorical
-    values: [0.1, 0.2, 0.3, 0.4, 0.5]
+    distribution: q_uniform
+    min: 0.1
+    max: 0.5
+    q: 0.01
 
   colsample_bylevel:
-    distribution: categorical
-    values: [0.1, 0.2, 0.3, 0.4, 0.5]
+    distribution: q_uniform
+    min: 0.1
+    max: 0.5
+    q: 0.01
 
   colsample_bynode:
-    distribution: categorical
-    values: [0.1, 0.2, 0.3, 0.4, 0.5]
+    distribution: q_uniform
+    min: 0.1
+    max: 0.5
+    q: 0.01
 
   subsample:
-    distribution: categorical
-    values: [0.1, 0.2, 0.3, 0.4, 0.5]
+    distribution: q_uniform
+    min: 0.1
+    max: 0.5
+    q: 0.01
 
   max_depth:
-    distribution: categorical
-    values: [2, 3, 4, 5, 6, 7, 8, 9, 10]
+    distribution: int_uniform
+    min: 2
+    max: 10
   
   learning_rate:
-    distribution: categorical
-    values: [0.001, 0.01, 0.1, 0.2, 0.3]
-
+    distribution: q_uniform
+    min: 0.001
+    max: 0.1
+    q: 0.001

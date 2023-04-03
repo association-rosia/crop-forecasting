@@ -195,6 +195,12 @@ class Smoother(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         return X
 
 
+def replaceinf(arr: np.ndarray) -> np.ndarray:
+            if np.issubdtype(arr.dtype, np.number):
+                arr[np.isinf(arr)] = np.nan
+            return arr
+
+
 class Filler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
     """Fill dataset using the mean of each group of observation for a given date.
     For the reaining data use the mean of the dataset for a given developpment state.
@@ -213,12 +219,6 @@ class Filler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         :return: self
         :rtype: object
         """
-
-        def replaceinf(arr: np.ndarray) -> np.ndarray:
-            if np.issubdtype(arr.dtype, np.number):
-                arr[np.isinf(arr)] = np.nan
-            return arr
-
         # replace infinite value by na
         xr.apply_ufunc(replaceinf, X[S_COLUMNS])
         # compute mean of all stage of developpement for each cluster obsevation
@@ -236,12 +236,6 @@ class Filler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         :return: Transformed dataset.
         :rtype: xr.Dataset
         """
-
-        def replaceinf(arr: np.ndarray) -> np.ndarray:
-            if np.issubdtype(arr.dtype, np.number):
-                arr[np.isinf(arr)] = np.nan
-            return arr
-
         # replace infinite value by na
         xr.apply_ufunc(replaceinf, X[S_COLUMNS])
         # compute mean of all stage of developpement and all obsevation

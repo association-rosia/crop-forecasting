@@ -26,7 +26,15 @@ from src.constants import FOLDER, G_COLUMNS, M_COLUMNS, S_COLUMNS, TARGET, TARGE
 from utils import ROOT_DIR
 
 
-def merge_satellite(file: str):
+def merge_satellite(file: str)->xr.Dataset:
+    """Merge Augmented 10 / 40 / 50 to another one.
+
+    :param file: File name of all datasets.
+    :type file: str
+    :return: Merged dataset.
+    :rtype: xr.Dataset
+    """
+    # Open dataset
     def open_dataset(folder):
         return xr.open_dataset(
             join(ROOT_DIR, "data", "external", "satellite", folder, file),
@@ -38,23 +46,29 @@ def merge_satellite(file: str):
 
     folder = "augment_40_5"
     xds_40 = open_dataset(folder)
+    # Change number of ts_aug to not be overwrite during the merge
     xds_40["ts_aug"] = np.arange(50, 90)
 
     folder = "augment_10_5"
     xds_10 = open_dataset(folder)
+    # Same
     xds_10["ts_aug"] = np.arange(90, 100)
 
     xds_100 = xr.merge([xds_50, xds_40, xds_10], compat="no_conflicts")
-
-    # id_shape = xds_100['ts_id'].values.shape
-    # xds_100['ts_id'] = (xds_100['ts_id'].dims, np.reshape(np.arange(np.prod(id_shape)), id_shape))
 
     return xds_100
 
 
 def add_observation(xds: xr.Dataset, test: bool) -> xr.Dataset:
-    # Process and Merge EY data to Satellite Dataset
+    """Process and Merge EY data to Satellite Dataset.
 
+    :param xds: _description_
+    :type xds: xr.Dataset
+    :param test: _description_
+    :type test: bool
+    :return: _description_
+    :rtype: xr.Dataset
+    """
     def categorical_encoding(xds: xr.Dataset) -> xr.Dataset:
         # Encode Rice Crop Intensity feature D = 2 and T = 3
         xds["Rice Crop Intensity(D=Double, T=Triple)"] = (
@@ -176,13 +190,13 @@ def statedev_fill(xds: xr.Dataset) -> xr.Dataset:
     # replace ± infinite value by na
     xr.apply_ufunc(replaceinf, xds[S_COLUMNS])
     # compute mean of all stage of developpement and all obsevation
-    xds_mean = xds.mean(dim="ts_aug", skipna=True)
+    xds_mean = xds[S_COLUMNS].mean(dim="ts_aug", skipna=True)
     # fill na value with computed mean
-    xds = xds.fillna(xds_mean)
+    xds[S_COLUMNS] = xds[S_COLUMNS].fillna(xds_mean)
     # compute mean of all stage of developpement of rice field to complete last na values
     xds_mean = xds_mean.mean(dim="ts_obs", skipna=True)
     # fill na value with computed mean
-    xds = xds.fillna(xds_mean)
+    xds[S_COLUMNS] = xds[S_COLUMNS].fillna(xds_mean)
 
     return xds
 
