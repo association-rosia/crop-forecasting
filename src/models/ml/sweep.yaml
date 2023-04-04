@@ -14,7 +14,7 @@ parameters:
 
   dim_reduction:
     distribution: categorical
-    values: ['Aggregate', 'PCA']
+    values: ['Aggregate', 'PCA', None]
 
   weather:
     distribution: categorical
