@@ -11,10 +11,10 @@ sys.path.insert(1, parent)
 import torch
 import torch.nn as nn
 import wandb
-from dataloader import get_dataloaders
-from model import CustomModel
+from src.models.dataloader import get_dataloaders
+from src.models.model import CustomModel
 from torch.utils.data import DataLoader
-from trainer import Trainer
+from src.models.trainer import Trainer
 
 
 def main():
@@ -56,7 +56,7 @@ def main():
     trainer.train()
 
 
-def init_wandb() -> (dict, DataLoader, DataLoader):
+def init_wandb() -> tuple[dict, DataLoader, DataLoader]:
     """ Init W&B logger and get the model config from W&B sweep config yaml file
         + get the training and validation dataloaders.
 
