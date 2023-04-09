@@ -22,7 +22,8 @@ from src.data.preprocessing import Smoother
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
-from src.constants import FOLDER, G_COLUMNS, M_COLUMNS, S_COLUMNS, TARGET, TARGET_TEST
+from src.constants import (FOLDER, G_COLUMNS, M_COLUMNS, S_COLUMNS, TARGET,
+                           TARGET_TEST)
 from utils import ROOT_DIR
 
 

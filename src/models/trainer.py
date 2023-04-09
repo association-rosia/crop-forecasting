@@ -1,22 +1,35 @@
 import os
 import sys
 from datetime import datetime
-from math import sqrt
 from os.path import join
 
 import pandas as pd
 import torch
-from sklearn.metrics import r2_score
-from tqdm import tqdm
-
+import torch.nn as nn
 import wandb
+from sklearn.metrics import r2_score
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 parent = os.path.abspath('.')
 sys.path.insert(1, parent)
 from utils import ROOT_DIR
 
 
-def compute_r2_scores(observations, labels, preds):
+def compute_r2_scores(observations: list, labels: list, preds: list) -> (float, float):
+    """ Compute R^2 scores for a given set of observations and labels.
+
+    :param observations: list of observations
+    :type observations: list[int]
+    :param labels: list of labels
+    :type labels: list[float]
+    :param preds: list of predictions
+    :type preds: list[float]
+    :return: R^2 scores (the full is the score for the all the rows,
+             the mean is the aggregated score grouped by observations)
+    :rtype: tuple[float, float]
+    """
+
     df = pd.DataFrame()
     df['observations'] = observations
     df['labels'] = labels
@@ -29,7 +42,22 @@ def compute_r2_scores(observations, labels, preds):
 
 
 class Trainer:
-    def __init__(self, model, train_dataloader, val_dataloader, epochs, criterion, optimizer, scheduler):
+    """ Define the Trainer class.
+
+            :param model: our deep learning model
+            :type model: nn.Module
+            :param train_dataloader: training dataloader
+            :type train_dataloader: DataLoader
+            :param val_dataloader: validation dataloader
+            :type val_dataloader: DataLoader
+            :param epochs: max number of epochs
+            :type epochs: int
+            :param criterion: loss function
+            :param optimizer: model optimizer
+            :param scheduler: learning scheduler
+            """
+    def __init__(self, model: nn.Module, train_dataloader: DataLoader, val_dataloader: DataLoader,
+                 epochs: int, criterion, optimizer, scheduler):
         self.model = model
         self.train_loader = train_dataloader
         self.val_loader = val_dataloader
@@ -40,7 +68,12 @@ class Trainer:
         self.timestamp = int(datetime.now().timestamp())
         self.val_best_r2_score = 0.
 
-    def train_one_epoch(self):
+    def train_one_epoch(self) -> float:
+        """ Train the model for one epoch.
+
+        :return: the training loss
+        :rtype: float
+        """
         train_loss = 0.
 
         self.model.train()
@@ -67,6 +100,7 @@ class Trainer:
             train_loss += loss.item()
             epoch_loss = train_loss / (i + 1)
 
+            # Update the progress bar with new metrics values
             pbar.set_description(f'TRAIN - Batch: {i + 1}/{len(self.train_loader)} - '
                                  f'Epoch Loss: {epoch_loss:.5f} - '
                                  f'Batch Loss: {loss.item():.5f}')
@@ -75,7 +109,12 @@ class Trainer:
 
         return train_loss
 
-    def val_one_epoch(self):
+    def val_one_epoch(self) -> tuple[float, float, float]:
+        """ Validate the model for one epoch.
+
+        :return: the validation loss, the R^2 score and the aggregated R^2 score
+        :rtype: tuple[float, float, float]
+        """
         val_loss = 0.
         observations = []
         val_labels = []
@@ -99,6 +138,7 @@ class Trainer:
             val_labels += labels.squeeze().tolist()
             val_preds += outputs.squeeze().tolist()
 
+            # Update the progress bar with new metrics values
             pbar.set_description(f'VAL - Batch: {i + 1}/{len(self.val_loader)} - '
                                  f'Epoch Loss: {epoch_loss:.5f} - '
                                  f'Batch Loss: {loss.item():.5f}')
@@ -108,25 +148,31 @@ class Trainer:
 
         return val_loss, val_r2_score, val_mean_r2_score
 
-    def save(self, score):
+    def save(self, score: float):
+        """ Save the model if it is the better than the previous sevaed one.
+
+        :param score: current model epoch score
+        :type score: float
+        """
         save_folder = join(ROOT_DIR, 'models')
 
         if score > self.val_best_r2_score:
             self.val_best_r2_score = score
             os.makedirs(save_folder, exist_ok=True)
 
-            # delete former best model 
+            # delete the former best model
             former_model = [f for f in os.listdir(save_folder) if f.split('_')[-1] == f'{self.timestamp}.pt']
             if len(former_model) == 1:
                 os.remove(join(save_folder, former_model[0]))
 
-            # save new model 
+            # save the new model
             score = str(score)[:7].replace('.', '-')
             file_name = f'{score}_model_{self.timestamp}.pt'
             save_path = join(save_folder, file_name)
             torch.save(self.model, save_path)
 
-    def train(self):  # train model
+    def train(self):
+        """ Main function to train the model. """
         iter_epoch = tqdm(range(self.epochs), leave=False)
 
         for epoch in iter_epoch:
@@ -137,6 +183,7 @@ class Trainer:
             self.scheduler.step(val_loss)
             self.save(val_mean_r2_score)
 
+            # log the metrics to W&B
             wandb.log({
                 'train_loss': train_loss,
                 'val_loss': val_loss,
@@ -145,6 +192,7 @@ class Trainer:
                 'val_best_r2_score': self.val_best_r2_score
             })
 
+            # Write the finished epoch metrics values
             iter_epoch.write(f'EPOCH {epoch + 1}/{self.epochs}: '
                              f'Train = {train_loss:.5f} - '
                              f'Val = {val_loss:.5f} - '

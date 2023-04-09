@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class CustomModel(nn.Module):
-    """ PyTorch class to define our custom model
+    """ PyTorch class to define our custom model.
 
     :param config: Contains all the model configs, also used in W&B logging
     :type config: dict
@@ -51,7 +51,7 @@ class CustomModel(nn.Module):
         self.fc_dropout = nn.Dropout(self.fc_p)
 
     def forward(self, x: dict) -> torch.Tensor:
-        """ Model forward pass function
+        """ Model forward pass function.
 
         :param x: Model inputs
         :type x: dict

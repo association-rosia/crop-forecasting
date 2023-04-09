@@ -30,18 +30,29 @@ DEGREE = 0.0014589825157734703  # = ha_to_degree(2.622685) # Field size (ha) mea
 
 
 def ha_to_degree(field_size: float) -> float:  # Field_size (ha)
+    """ Convert field size (ha) to degree.
+
+    :param field_size: field size (ha)
+    :type field_size: float
+    :return: field width/length (degree)
+    :rtype: float
     """
-    1° ~= 111km
-    1ha = 0.01km2
-    then, side_size = sqrt(0.01 * field_size) (km)
-    so, degree = side_size / 111 (°)
-    """
+
+    # 1° ~= 111km
+    # 1ha = 0.01km2
+    # then, side_size = sqrt(0.01 * field_size) (km)
+    # so, degree = side_size / 111 (°)
     side_size = math.sqrt(0.01 * field_size)
     degree = side_size / 111
     return degree
 
 
 def create_folders() -> str:
+    """ Create folders in function of the extraction type.
+
+    :return: name of the folder created
+    :rtype: str
+    """
     save_folder = None
 
     if NUM_AUGMENT > 1:
@@ -64,7 +75,13 @@ def create_folders() -> str:
     return save_folder
 
 
-def get_factors() -> list[int]:
+def get_factors() -> list[float]:
+    """ Randomly draw factors to create augmented windows
+        to retrieve different satellite images.
+
+    :return: four random factors (between 1/MAX_AUGMENT and MAX_AUGMENT)
+    :rtype: list[float]
+    """
     factors = []
     for _ in range(4):
         factor = uniform(1, MAX_AUGMENT)
@@ -75,12 +92,23 @@ def get_factors() -> list[int]:
     return factors
 
 
-def get_bbox(
-    longitude: float, latitude: float, field_size: float
-) -> tuple[float, float, float, float]:
+def get_bbox(longitude: float, latitude: float, field_size: float) -> tuple[float, float, float, float]:
+    """ Get the bounding box of the satellite image
+        using augmented window factors.
+
+    :param longitude: longitude of the satellite image
+    :type longitude: float
+    :param latitude: latitude of the satellite image
+    :type latitude: float
+    :param field_size: field size (ha)
+    :type field_size: float
+    :return: max and min longitude, min and max latitude
+    :rtype: tuple[float, float, float, float]
+    """
+
     if SIZE == "fixed":
         degree = DEGREE
-    elif SIZE == "adaptative":
+    else:
         degree = ha_to_degree(field_size) * FACTOR
 
     length = degree / 2
@@ -94,17 +122,35 @@ def get_bbox(
 
 
 def get_time_period(harvest_date: str, history_days: int) -> str:
+    """ Get the time period using the harvest date
+        and the number history days defined.
+
+    :param harvest_date: Date of the harvest
+    :type harvest_date: str (%d-%m-%Y date format)
+    :param history_days: Number of history days chosen
+    :type history_days: int
+    :return: string with the (calculated) sowing and harvest date (%d-%m-%Y date format)
+    :rtype: str
+    """
     harvest_datetime = datetime.strptime(harvest_date, "%d-%m-%Y")
     sowing_datetime = harvest_datetime - timedelta(days=history_days)
     return f'{sowing_datetime.strftime("%Y-%m-%d")}/{harvest_datetime.strftime("%Y-%m-%d")}'
 
 
-def get_data(
-    bbox: tuple[float, float, float, float],
-    time_period: str,
-    bands: list[str],
-    scale: float,
-) -> xr.Dataset:
+def get_data(bbox: tuple[float, float, float, float], time_period: str, bands: list[str], scale: float) -> xr.Dataset:
+    """ Get satellite data.
+
+    :param bbox: Bounding box of the satellite image.
+    :type bbox: tuple[float, float, float, float]
+    :param time_period: Time period of the satellite image.
+    :type time_period: str
+    :param bands: List of bands to retrieve.
+    :type bands: list[str]
+    :param scale: Resolution of the satellite image, defaults to 10.
+    :type scale: float
+    :return: Dataset processed of an observation.
+    :rtype: xr.Dataset
+    """
     catalog = pystac_client.Client.open(
         "https://planetarycomputer.microsoft.com/api/stac/v1", modifier=pc.sign_inplace
     )
@@ -116,10 +162,8 @@ def get_data(
     return data
 
 
-def save_data(
-    row: pd.Series, history_days: int, history_dates: int, resolution: int
-) -> xr.Dataset:
-    """Get Satellite Dataset and process it to be used.
+def save_data(row: pd.Series, history_days: int, history_dates: int, resolution: int) -> xr.Dataset:
+    """ Get Satellite Dataset and process it to be used.
 
     :param row: Series representing an observation.
     :type row: pd.Series
@@ -139,11 +183,14 @@ def save_data(
     latitude = row["Latitude"]
     field_size = float(row["Field size (ha)"])
     bbox = get_bbox(longitude, latitude, field_size)
+
     # Get the time periode to retrieve statellite data
     harvest_date = row["Date of Harvest"]
     time_period = get_time_period(harvest_date, history_days)
 
+    # Get the satellite data
     xds = get_data(bbox, time_period, bands, scale)
+
     # Cloud mask on SCL value to only keep clear data
     cloud_mask = (
         (xds.SCL != 0)
@@ -155,20 +202,27 @@ def save_data(
         & (xds.SCL != 10)
     )
     xds = xds.where(cloud_mask)
+
     # Keep only useful data
     xds = xds.drop(["spatial_ref", "SCL"])
+
     # Compute the mean of each image by localisation
     xds = xds.mean(dim=["latitude", "longitude"], skipna=True)
+
     # Sort data by time
     xds = xds.sortby("time", ascending=False)
+
     # Keep only the history_dates oldest data
     xds = xds.isel(time=slice(None, history_dates))
+
     # Format data
     xds["time"] = xds["time"].dt.strftime("%Y-%m-%d")
+
     # Create a Variable named state_dev which reprensent
     # the number of development state keep and set it as dimension
     xds["state_dev"] = ("time", np.arange(history_dates)[::-1])
     xds = xds.swap_dims({"time": "state_dev"})
+
     # Rename bands api name by more readable name
     # Dictionnary for matching api bands name and natural bands name
     dict_band_name = {
@@ -182,13 +236,9 @@ def save_data(
     return xds
 
 
-def save_data_app(
-    index_row: tuple[str, pd.Series],
-    history_days: int = 130,
-    history_dates: int = 24,
-    resolution: int = 10,
-) -> xr.Dataset:
-    """Get Satellite Datasets from an observation and concat them to one.
+def save_data_app(index_row: tuple[str, pd.Series], history_days: int = 130, history_dates: int = 24,
+                  resolution: int = 10,) -> xr.Dataset:
+    """ Get Satellite Datasets from an observation and concat them to one.
 
     :param index_row: Tuple of index string and a Series representing an observation.
     :type index_row: tuple[str, pd.Series]
@@ -208,8 +258,10 @@ def save_data_app(
         xds = save_data(index_row[1], history_days, history_dates, resolution)
         xds = xds.expand_dims({"ts_aug": [i]})
         list_xds.append(xds)
+
     # Concat list of Dataset into a single one representing one observation * NUM_AUGMENT
     xds: xr.Dataset = xr.concat(list_xds, dim="ts_aug")
+
     # Create a new dimenstion called ts_obs representing the index of the observation.
     xds = xds.expand_dims({"ts_obs": [index_row[0]]})
 
@@ -217,8 +269,8 @@ def save_data_app(
 
 
 def init_df(df: pd.DataFrame, path: str) -> tuple[pd.DataFrame, list]:
-    """Check for missing observations on the dataset and make
-    and filter the dataframe to only keep the missing ones.
+    """ Check for missing observations on the dataset and make
+        and filter the dataframe to only keep the missing ones.
 
     :param df: DataFrame of all observations.
     :type df: pd.DataFrame
@@ -241,18 +293,18 @@ def init_df(df: pd.DataFrame, path: str) -> tuple[pd.DataFrame, list]:
 
 
 class Checkpoint(Exception):
-    """Exception class to save data during the retrieval."""
+    """ Exception class to save data during the retrieval. """
 
     def __init__(self):
         pass
 
 
 def make_data(path: str, save_file: str) -> bool:
-    """From a given csv at EY data format get satellite data
-    corresponding to the localisation and date of each observation
-    from microsoft api and save it into external directory.
-    Implement an auto restart from the last observation saved.
-    Save data as nc format using scipy engine.
+    """ From a given csv at EY data format get satellite data
+        corresponding to the localisation and date of each observation
+        from microsoft api and save it into external directory.
+        Implement an auto restart from the last observation saved.
+        Save data as nc format using scipy engine.
 
     :param path: CSV path of EY data.
     :type path: str
