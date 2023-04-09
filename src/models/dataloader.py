@@ -1,6 +1,7 @@
 import os
 import sys
-from  typing import Tuple, List, Dict
+from typing import Dict, List, Tuple
+
 import numpy as np
 import pandas as pd
 import torch
@@ -9,7 +10,8 @@ from scipy import stats
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
 
-from src.constants import FOLDER, G_COLUMNS, M_COLUMNS, S_COLUMNS, TARGET, TARGET_TEST
+from src.constants import (FOLDER, G_COLUMNS, M_COLUMNS, S_COLUMNS, TARGET,
+                           TARGET_TEST)
 
 parent = os.path.abspath(".")
 sys.path.insert(1, parent)

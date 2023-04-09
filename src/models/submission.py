@@ -18,11 +18,12 @@ from dataloader import get_dataloaders
 from src.constants import TARGET, TARGET_TEST
 from utils import ROOT_DIR
 
-MODEL = '0-65983_model_1680214126.pt'
+
+MODEL = 'toasty-sky-343.pt'
 
 
 def rounded_yield(x: float, crop_yields: list) -> float:
-    """ Rounded predictions using the labelled crop yields
+    """ Rounded predictions using the labelled crop yields.
 
     :param x: Current prediction
     :type: float
@@ -36,7 +37,7 @@ def rounded_yield(x: float, crop_yields: list) -> float:
 
 
 def get_device() -> str:
-    """ Get GPU device, return Exception if no GPU is available
+    """ Get GPU device, return Exception if no GPU is available.
 
     :return: GPU device
     :rtype: str
@@ -52,7 +53,7 @@ def get_device() -> str:
 
 
 def create_submission(observations: list, preds: list) -> None:
-    """ Create submission file using the predictions
+    """ Create submission file using the predictions.
 
     :param observations: Obseravtions indexes
     :type observations: list
@@ -68,11 +69,13 @@ def create_submission(observations: list, preds: list) -> None:
     test_path = join(ROOT_DIR, 'data', 'raw', 'test.csv')
     test_df = pd.read_csv(test_path)
 
+    # scale the data using MinMaxScaler
     scaler = MinMaxScaler()
     train_path = join(ROOT_DIR, 'data', 'raw', 'train.csv')
     train_df = pd.read_csv(train_path)
     scaler.fit(train_df[[TARGET]])
 
+    # transform back the predictions
     test_df[TARGET_TEST] = scaler.inverse_transform(df[['preds']])
 
     crop_yields = train_df[TARGET].unique().tolist()
@@ -82,7 +85,7 @@ def create_submission(observations: list, preds: list) -> None:
 
 
 class Evaluator:
-    """ Evaluate model performance on test set
+    """ Evaluate model performance on test set.
 
     :param test_dataloader: Test dataloader
     :type test_dataloader: DataLoader
@@ -93,8 +96,8 @@ class Evaluator:
         self.test_dataloader = test_dataloader
         self.device = device
 
-    def evaluate(self, model: nn.Module) -> bool:
-        """ Evaluate model performance on test set using the rounded predictions
+    def evaluate(self, model: nn.Module):
+        """ Evaluate model performance on test set using the rounded predictions.
 
         :param model: Our PyTorch model
         :type model: nn.Module
@@ -118,12 +121,19 @@ class Evaluator:
         
         
 if __name__ == '__main__':
+    # get the device
     device = get_device()
+
+    # get the test dataloader
     _, _, test_dataloader = get_dataloaders(batch_size=64, val_rate=0.2, device=device)
     
+    # create the evaluator
     evaluator = Evaluator(test_dataloader, device)
-    
+
+    # load the model
     model_path = join(ROOT_DIR, 'models', MODEL)
     model = torch.load(model_path).to(device)
+
+    # evaluate the model on the test set
     evaluator.evaluate(model)
     

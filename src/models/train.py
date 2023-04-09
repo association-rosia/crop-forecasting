@@ -10,22 +10,29 @@ sys.path.insert(1, parent)
 
 import torch
 import torch.nn as nn
+import wandb
 from dataloader import get_dataloaders
 from model import CustomModel
+from torch.utils.data import DataLoader
 from trainer import Trainer
-
-import wandb
 
 
 def main():
+    # empty the GPU cache
     torch.cuda.empty_cache()
+
+    # get the device
     device = get_device()
 
+    # init W&B logger and get the model config from W&B sweep config yaml file
+    # + get the training and validation dataloaders
     config, train_dataloader, val_dataloader = init_wandb()
 
+    # init the model
     model = CustomModel(config)
     model.to(device)
 
+    # init the loss, optimizer and learning rate scheduler
     criterion = nn.MSELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=config['learning_rate'])
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
@@ -42,11 +49,21 @@ def main():
         'scheduler': scheduler,
     }
 
+    # init the trainer
     trainer = Trainer(**train_config)
+
+    # train the model
     trainer.train()
 
 
-def init_wandb():
+def init_wandb() -> (dict, DataLoader, DataLoader):
+    """ Init W&B logger and get the model config from W&B sweep config yaml file
+        + get the training and validation dataloaders.
+
+    :return: the model config and the training and validation dataloaders
+    :rtype: (dict, DataLoader, DataLoader)
+    """
+
     wandb.init(
         project='winged-bull',
         group='crop-forecasting',
