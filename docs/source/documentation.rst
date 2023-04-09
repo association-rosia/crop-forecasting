@@ -17,6 +17,8 @@ Documentation
     train
     trainer
     dataloader
+    model
+    submission
 
 .. toctree::
     :caption: Machine Learning

@@ -7,7 +7,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Make data &mdash; Crop forecasting 1.0.0 documentation</title>
+  <title>Make Data &mdash; Crop forecasting 1.0.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   <link rel="stylesheet" href="_static/css/theme.min.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Process data" href="process_data.html" />
+    <link rel="next" title="Process Data" href="process_data.html" />
     <link rel="prev" title="Documentation" href="documentation.html" /> 
 
 </head>
@@ -72,7 +72,7 @@
         
           <li><a href="documentation.html">Documentation</a></li>
         
-      <li>Make data</li>
+      <li>Make Data</li>
     
     
       <li class="breadcrumbs-aside">
@@ -112,9 +112,12 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="documentation.html">Documentation</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Make data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="process_data.html">Process data</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Make Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="process_data.html">Process Data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="preprocessing.html">Preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="train.html">Train</a></li>
+<li class="toctree-l2"><a class="reference internal" href="trainer.html">Trainer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataloader.html">Dataloader</a></li>
 </ul>
 </li>
 </ul>
@@ -129,7 +132,7 @@
                             
   <img alt="_images/banner.jpg" src="_images/banner.jpg" />
 <section id="make-data">
-<h1>Make data<a class="headerlink" href="#make-data" title="Permalink to this heading">¶</a></h1>
+<h1>Make Data<a class="headerlink" href="#make-data" title="Permalink to this heading">¶</a></h1>
 <section id="save-data">
 <h2>save_data<a class="headerlink" href="#save-data" title="Permalink to this heading">¶</a></h2>
 <dl class="py function">
@@ -185,8 +188,10 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="src.data.make_data.init_df">
 <span class="sig-prename descclassname"><span class="pre">src.data.make_data.</span></span><span class="sig-name descname"><span class="pre">init_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">pandas.core.frame.DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#src.data.make_data.init_df" title="Permalink to this definition">¶</a></dt>
-<dd><p>Check for missing observations on the dataset and make
-and filter the dataframe to only keep the missing ones.</p>
+<dd><dl class="simple">
+<dt>Check for missing observations on the dataset and make</dt><dd><p>and filter the dataframe to only keep the missing ones.</p>
+</dd>
+</dl>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -209,11 +214,13 @@ and filter the dataframe to only keep the missing ones.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="src.data.make_data.make_data">
 <span class="sig-prename descclassname"><span class="pre">src.data.make_data.</span></span><span class="sig-name descname"><span class="pre">make_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="headerlink" href="#src.data.make_data.make_data" title="Permalink to this definition">¶</a></dt>
-<dd><p>From a given csv at EY data format get satellite data
-corresponding to the localisation and date of each observation
+<dd><dl class="simple">
+<dt>From a given csv at EY data format get satellite data</dt><dd><p>corresponding to the localisation and date of each observation
 from microsoft api and save it into external directory.
 Implement an auto restart from the last observation saved.
 Save data as nc format using scipy engine.</p>
+</dd>
+</dl>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

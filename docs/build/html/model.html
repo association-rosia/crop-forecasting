@@ -7,7 +7,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Documentation &mdash; Crop forecasting 1.0.0 documentation</title>
+  <title>Pytorch Model &mdash; Crop forecasting 1.0.0 documentation</title>
   
 
   
@@ -29,9 +29,7 @@
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="_static/css/theme.min.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Make Data" href="make_data.html" />
-    <link rel="prev" title="Tutorial" href="tutorial.html" /> 
+    <link rel="search" title="Search" href="search.html" /> 
 
 </head>
 
@@ -70,13 +68,13 @@
     
       <li><a href="index.html">Docs</a></li>
         
-      <li>Documentation</li>
+      <li>Pytorch Model</li>
     
     
       <li class="breadcrumbs-aside">
         
             
-            <a href="_sources/documentation.rst.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/model.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -106,19 +104,16 @@
                             
                             
                                 <p class="caption" role="heading"><span class="caption-text">Navigation</span></p>
-<ul class="current">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Documentation</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="documentation.html">Documentation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="make_data.html">Make Data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="process_data.html">Process Data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="preprocessing.html">Preprocessing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="train.html">Train</a></li>
 <li class="toctree-l2"><a class="reference internal" href="trainer.html">Trainer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dataloader.html">Dataloader</a></li>
-<li class="toctree-l2"><a class="reference internal" href="model.html">Pytorch Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="submission.html">Submission</a></li>
-<li class="toctree-l2"><a class="reference internal" href="train_ml.html">Train</a></li>
 </ul>
 </li>
 </ul>
@@ -132,32 +127,39 @@
                         
                             
   <img alt="_images/banner.jpg" src="_images/banner.jpg" />
-<section id="documentation">
-<h1>Documentation<a class="headerlink" href="#documentation" title="Permalink to this heading">¶</a></h1>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Data</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="make_data.html">Make Data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="process_data.html">Process Data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="preprocessing.html">Preprocessing</a></li>
-</ul>
-</div>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Deep Learning</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="train.html">Train</a></li>
-<li class="toctree-l1"><a class="reference internal" href="trainer.html">Trainer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dataloader.html">Dataloader</a></li>
-<li class="toctree-l1"><a class="reference internal" href="model.html">Pytorch Model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="submission.html">Submission</a></li>
-</ul>
-</div>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Machine Learning</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="train_ml.html">Train</a></li>
-</ul>
-</div>
+<section id="pytorch-model">
+<h1>Pytorch Model<a class="headerlink" href="#pytorch-model" title="Permalink to this heading">¶</a></h1>
+<section id="custommodel">
+<h2>CustomModel<a class="headerlink" href="#custommodel" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="src.models.model.CustomModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.models.model.</span></span><span class="sig-name descname"><span class="pre">CustomModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.models.model.CustomModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>PyTorch class to define our custom model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>config</strong> (<em>dict</em>) – Contains all the model configs, also used in W&amp;B logging</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.models.model.CustomModel.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#src.models.model.CustomModel.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Model forward pass function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x</strong> (<em>dict</em>) – Model inputs</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Model output</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
 </section>
 
 

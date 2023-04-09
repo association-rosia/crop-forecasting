@@ -1,5 +1,5 @@
 ============
-Process data
+Process Data
 ============
 
 .. currentmodule:: src.data.process_data

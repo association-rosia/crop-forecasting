@@ -105,9 +105,15 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="documentation.html">Documentation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="make_data.html">Make data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="process_data.html">Process data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="make_data.html">Make Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="process_data.html">Process Data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="preprocessing.html">Preprocessing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="train.html">Train</a></li>
+<li class="toctree-l2"><a class="reference internal" href="trainer.html">Trainer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataloader.html">Dataloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model.html">Pytorch Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="submission.html">Submission</a></li>
+<li class="toctree-l2"><a class="reference internal" href="train_ml.html">Train</a></li>
 </ul>
 </li>
 </ul>
@@ -127,12 +133,16 @@
  <a href="#A"><strong>A</strong></a>
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
  | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
  | <a href="#I"><strong>I</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#P"><strong>P</strong></a>
+ | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
+ | <a href="#V"><strong>V</strong></a>
  
 </div>
 <h2 id="A">A</h2>
@@ -150,15 +160,25 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="trainer.html#src.models.trainer.compute_r2_scores">compute_r2_scores() (in module src.models.trainer)</a>
+</li>
       <li><a href="process_data.html#src.data.process_data.compute_vi">compute_vi() (in module src.data.process_data)</a>
 </li>
       <li><a href="preprocessing.html#src.data.preprocessing.Convertor">Convertor (class in src.data.preprocessing)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="process_data.html#src.data.process_data.create_id">create_id() (in module src.data.process_data)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="process_data.html#src.data.process_data.create_pb">create_pb() (in module src.data.process_data)</a>
+</li>
+      <li><a href="submission.html#src.models.submission.create_submission">create_submission() (in module src.models.submission)</a>
+</li>
+      <li><a href="dataloader.html#src.models.dataloader.create_train_val_idx">create_train_val_idx() (in module src.models.dataloader)</a>
+</li>
+      <li><a href="dataloader.html#src.models.dataloader.CustomDataset">CustomDataset (class in src.models.dataloader)</a>
+</li>
+      <li><a href="model.html#src.models.model.CustomModel">CustomModel (class in src.models.model)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -167,6 +187,18 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="preprocessing.html#src.data.datascaler.DatasetScaler">DatasetScaler (class in src.data.datascaler)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="submission.html#src.models.submission.Evaluator.evaluate">evaluate() (src.models.submission.Evaluator method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="submission.html#src.models.submission.Evaluator">Evaluator (class in src.models.submission)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -194,6 +226,20 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="preprocessing.html#src.data.datascaler.DatasetScaler.fit_transform">fit_transform() (src.data.datascaler.DatasetScaler method)</a>
 </li>
+      <li><a href="model.html#src.models.model.CustomModel.forward">forward() (src.models.model.CustomModel method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="dataloader.html#src.models.dataloader.get_dataloaders">get_dataloaders() (in module src.models.dataloader)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="submission.html#src.models.submission.get_device">get_device() (in module src.models.submission)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -202,8 +248,12 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="make_data.html#src.data.make_data.init_df">init_df() (in module src.data.make_data)</a>
 </li>
+      <li><a href="train_ml.html#src.models.ml.train.init_pipeline">init_pipeline() (in module src.models.ml.train)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="train.html#src.models.train.init_wandb">init_wandb() (in module src.models.train)</a>
+</li>
       <li><a href="preprocessing.html#src.data.datascaler.DatasetScaler.inverse_transform">inverse_transform() (src.data.datascaler.DatasetScaler method)</a>
 </li>
   </ul></td>
@@ -224,7 +274,19 @@
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="train_ml.html#src.models.ml.train.preprocess_y">preprocess_y() (in module src.models.ml.train)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="process_data.html#src.data.process_data.process_data">process_data() (in module src.data.process_data)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="submission.html#src.models.submission.rounded_yield">rounded_yield() (in module src.models.submission)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -232,6 +294,8 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="trainer.html#src.models.trainer.Trainer.save">save() (src.models.trainer.Trainer method)</a>
+</li>
       <li><a href="make_data.html#src.data.make_data.save_data">save_data() (in module src.data.make_data)</a>
 </li>
       <li><a href="make_data.html#src.data.make_data.save_data_app">save_data_app() (in module src.data.make_data)</a>
@@ -250,6 +314,12 @@
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="trainer.html#src.models.trainer.Trainer.train">train() (src.models.trainer.Trainer method)</a>
+</li>
+      <li><a href="trainer.html#src.models.trainer.Trainer.train_one_epoch">train_one_epoch() (src.models.trainer.Trainer method)</a>
+</li>
+      <li><a href="trainer.html#src.models.trainer.Trainer">Trainer (class in src.models.trainer)</a>
+</li>
       <li><a href="preprocessing.html#src.data.datascaler.DatasetScaler.transform">transform() (src.data.datascaler.DatasetScaler method)</a>
 
       <ul>
@@ -262,6 +332,18 @@
         <li><a href="preprocessing.html#src.data.preprocessing.Sorter.transform">(src.data.preprocessing.Sorter method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="dataloader.html#src.models.dataloader.transform_data">transform_data() (in module src.models.dataloader)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="trainer.html#src.models.trainer.Trainer.val_one_epoch">val_one_epoch() (src.models.trainer.Trainer method)</a>
+</li>
   </ul></td>
 </tr></table>
 

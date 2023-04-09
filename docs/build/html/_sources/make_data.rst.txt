@@ -1,5 +1,5 @@
 =========
-Make data
+Make Data
 =========
 
 .. currentmodule:: src.data.make_data

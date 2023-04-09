@@ -66,6 +66,11 @@ def main():
 
 
 def init_pipeline() -> Pipeline:
+    """Initialise scikit-learn Pipeline with the wandb configuration.
+
+    :return: Configured Pipeline.
+    :rtype: Pipeline
+    """
     params_pipeline = {
         "smoother__mode": None if isinstance(wandb.config.vi, bool) else wandb.config.vi,
         "convertor__agg": wandb.config.dim_reduction == "Aggregate",
@@ -100,6 +105,13 @@ def init_pipeline() -> Pipeline:
 
 
 def preprocess_y(xds: xr.Dataset) -> np.ndarray:
+    """Preprocess target to match processed samples.
+
+    :param xds: Dataset containing the target.
+    :type xds: xr.Dataset
+    :return: Target processed.
+    :rtype: np.ndarray
+    """
     df = xds[[TARGET] + S_COLUMNS].to_dataframe()
     y = df[[TARGET]].groupby(["ts_obs", "ts_aug"]).first()
     return y.reorder_levels(["ts_obs", "ts_aug"]).sort_index().to_numpy()
