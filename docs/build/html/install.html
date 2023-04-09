@@ -1,0 +1,230 @@
+
+
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Installation Guide &mdash; Crop forecasting 1.0.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.min.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.min.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Tutorial" href="tutorial.html" />
+    <link rel="prev" title="2023 EY Open Science Data Challenge" href="index.html" /> 
+
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <a class="site-nav-toggle hidden-lg-up"><i class="icon-menu"></i></a>
+            <a class="site-title" href="index.html">
+                Crop forecasting
+            </a>
+        </div>
+    </header>
+
+
+<div class="breadcrumbs-outer hidden-xs-down">
+    <div class="container">
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="breadcrumbs">
+    
+      <li><a href="index.html">Docs</a></li>
+        
+      <li>Installation Guide</li>
+    
+    
+      <li class="breadcrumbs-aside">
+        
+            
+            <a href="_sources/install.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+</div>
+    </div>
+</div>
+    <div class="main-outer">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 col-lg-3 site-nav">
+                    
+<div role="search">
+    <form class="search" action="search.html" method="get">
+        <div class="icon-input">
+            <input type="text" name="q" placeholder="Search" />
+            <span class="icon-search"></span>
+        </div>
+        <input type="submit" value="Go" class="d-hidden" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+                    <div class="site-nav-tree">
+                        
+                            
+                            
+                                <p class="caption" role="heading"><span class="caption-text">Navigation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="documentation.html">Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="make_data.html">Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="process_data.html">Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="preprocessing.html">Documentation</a></li>
+</ul>
+</li>
+</ul>
+
+                            
+                        
+                    </div>
+                </div>
+                <div class="col-12 col-lg-9">
+                    <div class="document">
+                        
+                            
+  <img alt="_images/banner.jpg" src="_images/banner.jpg" />
+<section id="installation-guide">
+<h1>Installation Guide<a class="headerlink" href="#installation-guide" title="Permalink to this heading">¶</a></h1>
+<section id="conda-environement">
+<h2>Conda environement<a class="headerlink" href="#conda-environement" title="Permalink to this heading">¶</a></h2>
+<p>This guide provides step-by-step instructions for installing the Conda environment. This allows you to recreate the environment to run our project with all its dependencies in a consistent and reproducible manner.</p>
+<section id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this heading">¶</a></h3>
+<p>Before installing the Conda environment, make sure you have the following prerequisites:</p>
+<ul class="simple">
+<li><p>Conda: If you don’t have Conda installed already, you can download and install it from the official <a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">Miniconda</a> or <a class="reference external" href="https://www.anaconda.com/products/distribution">Anaconda</a> website.</p></li>
+</ul>
+</section>
+<section id="installation-steps">
+<h3>Installation Steps<a class="headerlink" href="#installation-steps" title="Permalink to this heading">¶</a></h3>
+<p>Follow these steps to install the <cite>crop-forecasting-env</cite> Conda environment:</p>
+<ul class="simple">
+<li><p>Open a terminal or command prompt.</p></li>
+<li><p>Navigate to the main project directory named <cite>crop-forecasting</cite>.</p></li>
+<li><p>Run the following command to create a Conda environment from the <cite>environment.yml</cite> file:</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>environment.yml
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Activate the Conda environment:</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>activate<span class="w"> </span>crop-forecasting-env
+</pre></div>
+</div>
+</section>
+</section>
+<section id="weights-biases-account">
+<h2>Weights &amp; Biases Account<a class="headerlink" href="#weights-biases-account" title="Permalink to this heading">¶</a></h2>
+<section id="overview">
+<h3>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h3>
+<p>Weights &amp; Biases (wandb) is a powerful platform for tracking, visualizing, and analyzing machine learning experiments. To get started with wandb, you’ll need to create an account on the wandb website. Here are the steps to create a wandb account:</p>
+</section>
+<section id="go-to-the-wandb-website">
+<h3>Go to the WandB website<a class="headerlink" href="#go-to-the-wandb-website" title="Permalink to this heading">¶</a></h3>
+<p>Open a web browser and navigate to the <a class="reference external" href="https://wandb.ai/">wandb</a> website.</p>
+</section>
+<section id="click-on-get-started-for-free">
+<h3>Click on “Get Started for Free”<a class="headerlink" href="#click-on-get-started-for-free" title="Permalink to this heading">¶</a></h3>
+<p>Click on the “Get Started for Free” button on the wandb homepage to begin the account creation process.</p>
+</section>
+<section id="sign-up-with-a-provider-or-email">
+<h3>Sign Up with a Provider or Email<a class="headerlink" href="#sign-up-with-a-provider-or-email" title="Permalink to this heading">¶</a></h3>
+<p>You can sign up for a wandb account using your existing Google, GitHub, or email account. Choose the option that suits you best and follow the prompts to sign up.</p>
+</section>
+<section id="complete-the-sign-up-process">
+<h3>Complete the Sign Up Process<a class="headerlink" href="#complete-the-sign-up-process" title="Permalink to this heading">¶</a></h3>
+<p>If you sign up with a provider like Google or GitHub, you’ll be prompted to authorize wandb to access your account information. If you sign up with an email, you’ll need to provide some additional information like your name and password.</p>
+</section>
+<section id="verify-your-email-if-applicable">
+<h3>Verify Your Email (if applicable)<a class="headerlink" href="#verify-your-email-if-applicable" title="Permalink to this heading">¶</a></h3>
+<p>If you sign up with an email, you may need to verify your email address by clicking on a verification link sent to your email inbox. Follow the instructions in the email to complete the verification process.</p>
+</section>
+</section>
+<section id="congratulations-you-can-now-start-using-our-project">
+<h2>Congratulations ! You can now start using our project.<a class="headerlink" href="#congratulations-you-can-now-start-using-our-project" title="Permalink to this heading">¶</a></h2>
+</section>
+<section id="see-tutorial-for-futher-informations-about-it">
+<h2>See <a class="reference internal" href="tutorial.html"><span class="doc">Tutorial</span></a> for futher informations about it.<a class="headerlink" href="#see-tutorial-for-futher-informations-about-it" title="Permalink to this heading">¶</a></h2>
+</section>
+</section>
+
+
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>    
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'1.0.0',
+            LANGUAGE:'en',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/sphinx_highlight.js"></script>
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+    <div class="footer" role="contentinfo">
+        <div class="container">
+            &#169; Copyright 2023, Baptiste URGELL, Louis REBERGA.
+        Created using <a href="http://sphinx-doc.org/">Sphinx</a> 6.1.3.
+        </div>
+    </div>  
+
+</body>
+</html>
