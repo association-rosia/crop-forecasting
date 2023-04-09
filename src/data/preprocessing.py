@@ -1,4 +1,3 @@
-import glob
 import warnings
 from typing import Union
 
@@ -11,10 +10,14 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.signal import savgol_filter
-from sklearn.preprocessing import (MinMaxScaler, QuantileTransformer,
-                                   RobustScaler, StandardScaler)
+from sklearn.preprocessing import (
+    MinMaxScaler,
+    QuantileTransformer,
+    RobustScaler,
+    StandardScaler,
+)
 
-parent = os.path.abspath("../features")
+parent = os.path.abspath(".")
 sys.path.insert(1, parent)
 
 from os.path import join
@@ -25,58 +28,41 @@ from src.constants import G_COLUMNS, M_COLUMNS, S_COLUMNS
 from utils import ROOT_DIR
 
 
-# Scaler class used on ML exploration
-class Scaler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
-    """Scale an array. The method depend of the scaler given.
+class Sorter(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
+    """Sort dataset to align dataset samples with labels samples."""
 
-    :param scaler: Scaler used, defaults to StandardScaler()
-    :type scaler: Union[MinMaxScaler, StandardScaler, RobustScaler, QuantileTransformer], optional
-    """
-    def __init__(
-        self,
-        scaler: Union[
-            MinMaxScaler, StandardScaler, RobustScaler, QuantileTransformer
-        ] = StandardScaler(),
-    ) -> None:
-        
-        self.scaler = scaler
+    def __init__(self) -> None:
+        pass
 
-    def fit(self, X: pd.DataFrame, y=None) -> object:
-        """Fit the scaler initialised at scaler.
+    def fit(self, X=None, y=None) -> object:
+        """_summary_
 
-        :param X: The data used to fit the scaler, used for later scaling along the features axis.
-        :type X: pd.DataFrame
-        :param y: Ignored, defaults to None
-        :type y: None, optional
-        :return: Fitted scaler.
+        :param X: Ignored
+        :type X: None
+        :param y: Ignored
+        :type y: None
+        :return: self
         :rtype: object
         """
-        self.scaler = self.scaler.fit(X, y)
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        """Scale features of X according to feature_range.
-
-        :param X: Dataframe that will be transformed.
-        :type X: pd.DataFrame
-        :return: Transformed data.
-        :rtype: pd.DataFrame
-        """
-        return self.scaler.transform(X)
+        return X.reorder_levels(["ts_obs", "ts_aug"]).sort_index()
 
 
 # Convertor class used on ML exploration
 class Convertor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
-    def __init__(self, agg: bool = None, weather: bool = True, vi: bool = True) -> None:
-        """Used to transform the xarray.Dataset into pandas.DataFrame and reduce the dimention and/or tranform it.
+    """Used to transform the xarray.Dataset into pandas.DataFrame and reduce the dimention and/or tranform it.
 
-        :param agg: If True then replace features with their aggregations along the state_dev axis (agg = min, mean, max), defaults to None
-        :type agg: bool, optional
-        :param weather: If False then remove weather data from the Dataset, defaults to True
-        :type weather: bool, optional
-        :param vi: If False then remove vegetable indices from the Dataset, defaults to True
-        :type vi: bool, optional
-        """
+    :param agg: If True then replace features with their aggregations along the state_dev axis (agg = min, mean, max), defaults to None
+    :type agg: bool, optional
+    :param weather: If False then remove weather data from the Dataset, defaults to True
+    :type weather: bool, optional
+    :param vi: If False then remove vegetable indices from the Dataset, defaults to True
+    :type vi: bool, optional
+    """
+
+    def __init__(self, agg: bool = None, weather: bool = True, vi: bool = True) -> None:
         self.agg = agg
         self.weather = weather
         self.vi = vi
@@ -126,13 +112,13 @@ class Convertor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         X["agg"] = ["mean", "max", "min"]
         return X
 
-    def fit(self, X: xr.Dataset = None, y=None) -> object:
+    def fit(self, X=None, y=None) -> object:
         """Identity function.
 
-        :param X: Ignored, defaults to None
-        :type X: xr.Dataset, optional
-        :param y: Ignored, defaults to None
-        :type y: None, optional
+        :param X: Ignored
+        :type X: None
+        :param y: Ignored
+        :type y: None
         :return: Convertor.
         :rtype: object
         """
@@ -163,12 +149,13 @@ class Convertor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
 
 class Smoother(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
-    def __init__(self, mode: str = "savgol") -> None:
-        """Smooth Vegetable Indice Data.
+    """Smooth Vegetable Indice Data.
 
-        :param mode: methode used to smooth vi data, None to not perform smoothing during , defaults to "savgol"
-        :type mode: str, optional
-        """
+    :param mode: methode used to smooth vi data, None to not perform smoothing during , defaults to "savgol"
+    :type mode: str, optional
+    """
+
+    def __init__(self, mode: str = "savgol") -> None:
         self.mode = mode
 
     def smooth_savgol(self, ds: xr.Dataset) -> xr.Dataset:
@@ -208,166 +195,52 @@ class Smoother(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         return X
 
 
-class Concatenator:
-    """Adding EY data and Weather data to the Dataset.
-    Encode Categorical EY data.
-    Modify Weather data.
-    Compute Vegetable Indice and fill missing data.
-    """
-
-    def __init__(self) -> None:
-        pass
-
-    def add_observation(self, ds: xr.Dataset, test: bool) -> xr.Dataset:
-        # Process and Merge EY data to Satellite Dataset
-
-        def categorical_encoding(ds: xr.Dataset) -> xr.Dataset:
-            # Encode Rice Crop Intensity feature D = 2 and T = 3
-            ds["Rice Crop Intensity(D=Double, T=Triple)"] = (
-                ds["Rice Crop Intensity(D=Double, T=Triple)"]
-                .str.replace("D", "2")
-                .str.replace("T", "3")
-                .astype(np.int8)
-            )
-            return ds
-
-        # Select the right file
-        if test:
-            file_name = "test.csv"
-        else:
-            file_name = "train.csv"
-
-        path = join(ROOT_DIR, "data", "raw", file_name)
-        # Read csv EY data
-        df = pd.read_csv(path)
-        # Set index name as ts_obs for linked both Dataset
-        df.index.name = "ts_obs"
-        # Convert pandas.DataFrame into xarray.Dataset and merge on ts_obs
-        ds = xr.merge([ds, df.to_xarray()])
-        # Encode categoricals data
-        ds = categorical_encoding(ds)
-
-        return ds
-
-    def add_weather(self, ds: xr.Dataset) -> xr.Dataset:
-        # Process and Merge Weather data to Satellite & EY Dataset
-
-        def features_modification(ds: xr.Dataset) -> xr.Dataset:
-            # Crreate new features named solarexposure
-            # It is the difference between sunset and sunrise
-            ds["sunrise"] = ds["sunrise"].astype(np.datetime64)
-            ds["sunset"] = ds["sunset"].astype(np.datetime64)
-
-            ds["solarexposure"] = (ds["sunset"] - ds["sunrise"]).dt.seconds
-            return ds
-
-        # Read all weather csv and create a pandas.DataFrame of its
-        weather = []
-        for path in glob.glob(join(ROOT_DIR, "data", "external", "weather", "*.csv")):
-            weather.append(pd.read_csv(path))
-        df_weather = pd.concat(weather, axis="index")
-
-        # Convert timestamp into datetime for future purpose
-        df_weather["datetime"] = pd.to_datetime(df_weather["datetime"])
-        # Format name to match District features
-        df_weather["name"] = df_weather["name"].str.replace(" ", "_")
-        # Set as index datetime and name to became dimensions with the
-        # xarray.Dataset conversion
-        df_weather.set_index(["datetime", "name"], inplace=True)
-        ds_weather = df_weather.to_xarray().set_coords(["datetime", "name"])
-        ds_weather["datetime"] = ds_weather["datetime"].dt.strftime("%Y-%m-%d")
-        # Feature engineering on weather data
-        ds_weather = features_modification(ds_weather)
-        # Merge both Dataset
-        ds = xr.merge([ds, ds_weather])
-
-        return ds
-
-    def compute_vi(self, ds: xr.Dataset) -> xr.Dataset:
-        # Compute vegetable indices
-
-        def compute_ndvi(ds: xr.Dataset) -> xr.Dataset:
-            # Compute ndvi indice
-            return (ds.nir - ds.red) / (ds.nir + ds.red)
-
-        def compute_savi(ds, L=0.5) -> xr.Dataset:
-            # Compute savi indice
-            return 1 + L * (ds.nir - ds.red) / (ds.nir + ds.red + L)
-
-        def compute_evi(ds, G=2.5, L=1, C1=6, C2=7.5) -> xr.Dataset:
-            # Compute evi indice
-            return G * (ds.nir - ds.red) / (ds.nir + C1 * ds.red - C2 * ds.blue + L)
-
-        def compute_rep(ds: xr.Dataset) -> xr.Dataset:
-            # Compute rep indice
-            rededge = (ds.red + ds.rededge3) / 2
-            return 704 + 35 * (rededge - ds.rededge1) / (ds.rededge2 - ds.rededge1)
-
-        def compute_osavi(ds: xr.Dataset) -> xr.Dataset:
-            # Compute osavi indice
-            return (ds.nir - ds.red) / (ds.nir + ds.red + 0.16)
-
-        def compute_rdvi(ds: xr.Dataset) -> xr.Dataset:
-            # Compute rdvi indice
-            return (ds.nir - ds.red) / np.sqrt(ds.nir + ds.red)
-
-        def compute_mtvi1(ds: xr.Dataset) -> xr.Dataset:
-            # Compute mtvi1 indice
-            return 1.2 * (1.2 * (ds.nir - ds.green) - 2.5 * (ds.red - ds.green))
-
-        def compute_lswi(ds: xr.Dataset) -> xr.Dataset:
-            # Compute lswi indice
-            return (ds.nir - ds.swir) / (ds.nir + ds.swir)
-
-        ds["ndvi"] = compute_ndvi(ds)
-        ds["savi"] = compute_savi(ds)
-        ds["evi"] = compute_evi(ds)
-        ds["rep"] = compute_rep(ds)
-        ds["osavi"] = compute_osavi(ds)
-        ds["rdvi"] = compute_rdvi(ds)
-        ds["mtvi1"] = compute_mtvi1(ds)
-        ds["lswi"] = compute_lswi(ds)
-
-        return ds
-
-    def statedev_fill(self, ds: xr.Dataset) -> xr.Dataset:
-        # Fill missing vegetable indice and replace abnormal values
-
-        def replaceinf(arr: np.ndarray) -> np.ndarray:
+def replaceinf(arr: np.ndarray) -> np.ndarray:
             if np.issubdtype(arr.dtype, np.number):
                 arr[np.isinf(arr)] = np.nan
             return arr
 
-        # replace ± infinite value by na
-        xr.apply_ufunc(replaceinf, ds[S_COLUMNS])
-        # compute mean of all stage of developpement and all obsevation
-        ds_mean = ds.mean(dim="ts_aug", skipna=True)
-        # fill na value with computed mean
-        ds = ds.fillna(ds_mean)
-        # compute mean of all stage of developpement of rice field to complete last na values
-        ds_mean = ds_mean.mean(dim="ts_obs", skipna=True)
-        # fill na value with computed mean
-        ds = ds.fillna(ds_mean)
 
-        return ds
+class Filler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
+    """Fill dataset using the mean of each group of observation for a given date.
+    For the reaining data use the mean of the dataset for a given developpment state.
+    """
 
-    def transform(self, ds: xr.Dataset, test: bool) -> xr.Dataset:
-        """_summary_
+    def __init__(self) -> None:
+        self.values = None
 
-        :param ds: Dataset that will be transformed.
-        :type ds: xr.Dataset
-        :param test: True if it is the Test preprossessing.
-        :type test: bool
-        :return: Dataset trasformed.
+    def fit(self, X: xr.Dataset, y=None) -> object:
+        """Compute mean by developpement state to be used for later filling.
+
+        :param X: The data used to compute mean by developpement state used for later filling.
+        :type X: xr.Dataset
+        :param y: Ignored
+        :type y: None
+        :return: self
+        :rtype: object
+        """
+        # replace infinite value by na
+        xr.apply_ufunc(replaceinf, X[S_COLUMNS])
+        # compute mean of all stage of developpement for each cluster obsevation
+        self.values = (
+            X[S_COLUMNS].mean(dim="ts_aug", skipna=True).mean(dim="ts_obs", skipna=True)
+        )
+
+        return self
+
+    def transform(self, X: xr.Dataset) -> xr.Dataset:
+        """Performs the filling of missing values
+
+        :param X: The dataset used to fill.
+        :type X: xr.Dataset
+        :return: Transformed dataset.
         :rtype: xr.Dataset
         """
-        # Process and Merge EY data to Satellite Dataset
-        ds = self.add_observation(ds, test)
-        # Process and Merge Weather data to Satellite & EY Dataset
-        ds = self.add_weather(ds)
-        # Compute vegetable indices
-        ds = self.compute_vi(ds)
-        # Fill missing vegetable indice and replace abnormal values
-        ds = self.statedev_fill(ds)
+        # replace infinite value by na
+        xr.apply_ufunc(replaceinf, X[S_COLUMNS])
+        # compute mean of all stage of developpement and all obsevation
+        X[S_COLUMNS] = X[S_COLUMNS].fillna(X[S_COLUMNS].mean(dim="ts_aug", skipna=True))
+        # fill na value with fited mean
+        X[S_COLUMNS] = X[S_COLUMNS].fillna(self.values)
 
-        return ds
+        return X

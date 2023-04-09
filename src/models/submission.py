@@ -18,6 +18,7 @@ from dataloader import get_dataloaders
 from src.constants import TARGET, TARGET_TEST
 from utils import ROOT_DIR
 
+
 MODEL = 'toasty-sky-343.pt'
 
 
@@ -124,8 +125,8 @@ if __name__ == '__main__':
     device = get_device()
 
     # get the test dataloader
-    _, _, test_dataloader = get_dataloaders(batch_size=64, val_rate=0.2)
-
+    _, _, test_dataloader = get_dataloaders(batch_size=64, val_rate=0.2, device=device)
+    
     # create the evaluator
     evaluator = Evaluator(test_dataloader, device)
 
