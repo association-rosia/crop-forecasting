@@ -47,7 +47,7 @@ def get_device() -> str:
     elif torch.backends.mps.is_available():
         device = 'mps'
     else:
-        raise Exception("No GPU is available...")
+        device = 'cpu'
 
     return device
 
@@ -81,7 +81,7 @@ def create_submission(observations: list, preds: list) -> None:
     crop_yields = train_df[TARGET].unique().tolist()
     test_df[TARGET_TEST] = test_df[TARGET_TEST].apply(lambda x: rounded_yield(x, crop_yields))
     os.makedirs('submissions', exist_ok=True)
-    test_df.to_csv(f'submissions/{MODEL}.csv', index=False)
+    test_df.to_csv(f'submissions/{MODEL.split(".")[0]}.csv', index=False)
 
 
 class Evaluator:
