@@ -22,6 +22,24 @@ from utils import ROOT_DIR
 MODEL = 'toasty-sky-343.pt'
 
 
+def main()->None:
+    # get the device
+    device = get_device()
+
+    # get the test dataloader
+    _, _, test_dataloader = get_dataloaders(batch_size=64, val_rate=0.2, device=device)
+    
+    # create the evaluator
+    evaluator = Evaluator(test_dataloader, device)
+
+    # load the model
+    model_path = join(ROOT_DIR, 'models', MODEL)
+    model = torch.load(model_path).to(device)
+
+    # evaluate the model on the test set
+    evaluator.evaluate(model)
+
+
 def rounded_yield(x: float, crop_yields: list) -> float:
     """ Rounded predictions using the labelled crop yields.
 
@@ -118,22 +136,7 @@ class Evaluator:
             pbar.set_description(f'TEST - Batch: {i + 1}/{len(self.test_dataloader)}')
             
         create_submission(observations, test_preds)
-        
-        
+
+  
 if __name__ == '__main__':
-    # get the device
-    device = get_device()
-
-    # get the test dataloader
-    _, _, test_dataloader = get_dataloaders(batch_size=64, val_rate=0.2, device=device)
-    
-    # create the evaluator
-    evaluator = Evaluator(test_dataloader, device)
-
-    # load the model
-    model_path = join(ROOT_DIR, 'models', MODEL)
-    model = torch.load(model_path).to(device)
-
-    # evaluate the model on the test set
-    evaluator.evaluate(model)
-    
+    main()
