@@ -63,11 +63,11 @@ def merge_satellite(file: str)->xr.Dataset:
 def add_observation(xds: xr.Dataset, test: bool) -> xr.Dataset:
     """Process and Merge EY data to Satellite Dataset.
 
-    :param xds: _description_
+    :param xds: Satellite Dataset that will be merged
     :type xds: xr.Dataset
-    :param test: _description_
+    :param test: True if it is the test Dataset.
     :type test: bool
-    :return: _description_
+    :return: Merged Dataset.
     :rtype: xr.Dataset
     """
     def categorical_encoding(xds: xr.Dataset) -> xr.Dataset:
@@ -98,7 +98,13 @@ def add_observation(xds: xr.Dataset, test: bool) -> xr.Dataset:
 
 
 def add_weather(xds: xr.Dataset) -> xr.Dataset:
-    # Process and Merge Weather data to Satellite & EY Dataset
+    """Add meteorological data to the Dataset.
+
+    :param xds: Dataset that will be merged.
+    :type xds: xr.Dataset
+    :return: Merged Dataset.
+    :rtype: xr.Dataset
+    """
 
     def features_modification(xds: xr.Dataset) -> xr.Dataset:
         # Crreate new features named solarexposure
@@ -133,6 +139,13 @@ def add_weather(xds: xr.Dataset) -> xr.Dataset:
 
 
 def compute_vi(xds: xr.Dataset) -> xr.Dataset:
+    """Compute vegetable indices. That include NDVI, SAVI, EVI, REP, OSAVI, RDVI, MTVI1, LSWI.
+
+    :param xds: Dataset that include satellite band data, used to compute vegetable indice.
+    :type xds: xr.Dataset
+    :return: Merged Dataset.
+    :rtype: xr.Dataset
+    """
     # Compute vegetable indices
 
     def compute_ndvi(xds: xr.Dataset) -> xr.Dataset:

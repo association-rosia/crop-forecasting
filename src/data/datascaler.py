@@ -12,6 +12,23 @@ sys.path.insert(1, parent)
 
 
 class DatasetScaler:
+    """Scaler for Vegetable Indice, Geographical, Meteorological and Target.
+
+    :param scaler_s: Scikit-Learn scaler for Vegetable Indice data
+    :type scaler_s: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer]
+    :param columns_s: Vegetable Indice columns name
+    :type columns_s: list[str]
+    :param scaler_g: Scikit-Learn scaler for Geographical data
+    :type scaler_g: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer]
+    :param columns_g: Geographical columns name
+    :type columns_g: list[str]
+    :param scaler_m: Scikit-Learn scaler for Meteorological data
+    :type scaler_m: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer]
+    :param columns_m: Meteorological columns name
+    :type columns_m: list[str]
+    :param scaler_t: Scikit-Learn scaler for Target data
+    :type scaler_t: MinMaxScaler
+    """
     def __init__(
         self,
         scaler_s: Union[
@@ -28,24 +45,6 @@ class DatasetScaler:
         columns_m: list[str],
         scaler_t: MinMaxScaler,
     ) -> None:
-        """Scaler for Vegetable Indice, Geographical, Meteorological and Target.
-
-        :param scaler_s: Scikit-Learn scaler for Vegetable Indice data
-        :type scaler_s: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer]
-        :param columns_s: Vegetable Indice columns name
-        :type columns_s: list[str]
-        :param scaler_g: Scikit-Learn scaler for Geographical data
-        :type scaler_g: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer]
-        :param columns_g: Geografical columns name
-        :type columns_g: list[str]
-        :param scaler_m: Scikit-Learn scaler for Meteorological data
-        :type scaler_m: Union[StandardScaler, RobustScaler, PowerTransformer, QuantileTransformer]
-        :param columns_m: Meteorological columns name
-        :type columns_m: list[str]
-        :param scaler_t: Scikit-Learn scaler for Target data
-        :type scaler_t: MinMaxScaler
-        """
-
         self.scaler_s = scaler_s
         self.columns_s = columns_s
         self.scaler_g = scaler_g

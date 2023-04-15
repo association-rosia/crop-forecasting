@@ -16,7 +16,7 @@ sys.path.insert(1, parent)
 from utils import ROOT_DIR
 
 
-def compute_r2_scores(observations: list, labels: list, preds: list) -> (float, float):
+def compute_r2_scores(observations: list, labels: list, preds: list) -> tuple[float, float]:
     """ Compute R^2 scores for a given set of observations and labels.
 
     :param observations: list of observations

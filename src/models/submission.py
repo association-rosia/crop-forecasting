@@ -13,7 +13,7 @@ sys.path.insert(1, parent)
 
 from os.path import join
 
-from dataloader import get_dataloaders
+from src.models.dataloader import get_dataloaders
 
 from src.constants import TARGET, TARGET_TEST
 from utils import ROOT_DIR

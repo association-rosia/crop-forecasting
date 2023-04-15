@@ -35,7 +35,7 @@ class Sorter(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         pass
 
     def fit(self, X=None, y=None) -> object:
-        """_summary_
+        """Identity function
 
         :param X: Ignored
         :type X: None
@@ -47,6 +47,13 @@ class Sorter(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        """Reorder the indexes in an ascending way first by observation then by augmentation.
+
+        :param X: Dataset that will be transformed.
+        :type X: pd.DataFrame
+        :return: Transformed Dataframe.
+        :rtype: pd.DataFrame
+        """
         return X.reorder_levels(["ts_obs", "ts_aug"]).sort_index()
 
 
@@ -129,7 +136,7 @@ class Convertor(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
         :param X: Dataset that will be transformed.
         :type X: xr.Dataset
-        :return: Dataset transformed.
+        :return: Transformed Dataset.
         :rtype: pd.DataFrame
         """
         # Transform data to depends of the sames dimentions
@@ -185,7 +192,7 @@ class Smoother(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
         :param X: Dataset that will be transformed.
         :type X: xr.Dataset
-        :return: Dataset transformed.
+        :return: Transformed Dataset.
         :rtype: xr.Dataset
         """
         # If mode not equal to savgol, transform correspond to identity function.
@@ -233,7 +240,7 @@ class Filler(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
 
         :param X: The dataset used to fill.
         :type X: xr.Dataset
-        :return: Transformed dataset.
+        :return: Transformed Dataset.
         :rtype: xr.Dataset
         """
         # replace infinite value by na
