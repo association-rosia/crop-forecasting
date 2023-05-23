@@ -18,7 +18,7 @@ help:
 
 # Train target
 train:
-	python src/models/make_train.py
+	python src/models/make_train.py -m
 
 # Data target
 data:

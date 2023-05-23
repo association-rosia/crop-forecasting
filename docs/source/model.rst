@@ -4,8 +4,8 @@ Pytorch Model
 
 .. currentmodule:: src.models.model
 
-CustomModel
------------
+LSTMModel
+---------
 
-.. autoclass:: CustomModel
+.. autoclass:: LSTMModel
     :members:

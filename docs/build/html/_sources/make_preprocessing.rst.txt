@@ -2,7 +2,7 @@
 Process Data
 ============
 
-.. currentmodule:: src.data.process_data
+.. currentmodule:: src.data.make_preprocessing
 
 merge_satellite
 ---------------

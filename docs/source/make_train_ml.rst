@@ -2,7 +2,7 @@
 Train - Machine Learning
 ========================
 
-.. currentmodule:: src.models.ml.train
+.. currentmodule:: src.models.ml.make_train
 
 init_pipeline
 -------------

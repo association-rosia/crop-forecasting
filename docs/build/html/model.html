@@ -1,207 +1,145 @@
-
-
 <!DOCTYPE html>
-<head>
-  <meta charset="utf-8">
-  <meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>Pytorch Model &mdash; Crop forecasting 1.0.0 documentation</title>
-  
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  
-  
-  
-  
-
-  
-
-  
-  
-    
-
-  
-
-  <link rel="stylesheet" href="_static/css/theme.min.css" type="text/css" />
-  <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="_static/css/theme.min.css" type="text/css" />
+    <title>Pytorch Model &#8212; Crop forecasting 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Submission" href="submission.html" />
-    <link rel="prev" title="Dataloader" href="dataloader.html" /> 
+    <link rel="next" title="Submission" href="make_submission.html" />
+    <link rel="prev" title="Dataloader" href="dataloader.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-</head>
+  </head><body>
+  
 
-<body>
-    <header>
-        <div class="container">
-            <a class="site-nav-toggle hidden-lg-up"><i class="icon-menu"></i></a>
-            <a class="site-title" href="index.html">
-                Crop forecasting
-            </a>
-        </div>
-    </header>
-
-
-<div class="breadcrumbs-outer hidden-xs-down">
-    <div class="container">
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
-  <ul class="breadcrumbs">
-    
-      <li><a href="index.html">Docs</a></li>
-        
-          <li><a href="documentation.html">Documentation</a></li>
-        
-      <li>Pytorch Model</li>
-    
-    
-      <li class="breadcrumbs-aside">
-        
-            
-            <a href="_sources/model.rst.txt" rel="nofollow"> View page source</a>
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
           
-        
-      </li>
-    
-  </ul>
+
+          <div class="body" role="main">
+            
+  <img alt="_images/banner.jpg" src="_images/banner.jpg" />
+<section id="pytorch-model">
+<h1>Pytorch Model<a class="headerlink" href="#pytorch-model" title="Permalink to this heading">¶</a></h1>
+<section id="lstmmodel">
+<h2>LSTMModel<a class="headerlink" href="#lstmmodel" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="src.models.model.LSTMModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.models.model.</span></span><span class="sig-name descname"><span class="pre">LSTMModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.models.model.LSTMModel" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="src.models.model.LSTMModel.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.models.model.LSTMModel.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
 </div>
-    </div>
-</div>
-    <div class="main-outer">
-        <div class="container">
-            <div class="row">
-                <div class="col-12 col-lg-3 site-nav">
-                    
-<div role="search">
-    <form class="search" action="search.html" method="get">
-        <div class="icon-input">
-            <input type="text" name="q" placeholder="Search" />
-            <span class="icon-search"></span>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+          </div>
+          
         </div>
-        <input type="submit" value="Go" class="d-hidden" />
-        <input type="hidden" name="check_keywords" value="yes" />
-        <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-                    <div class="site-nav-tree">
-                        
-                            
-                            
-                                <p class="caption" role="heading"><span class="caption-text">Navigation</span></p>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Crop forecasting</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Navigation</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="documentation.html">Documentation</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="make_data.html">Make Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="process_data.html">Process Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="make_preprocessing.html">Process Data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="preprocessing.html">Preprocessing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="train.html">Train</a></li>
+<li class="toctree-l2"><a class="reference internal" href="make_train.html">Train</a></li>
 <li class="toctree-l2"><a class="reference internal" href="trainer.html">Trainer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="dataloader.html">Dataloader</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Pytorch Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="submission.html">Submission</a></li>
-<li class="toctree-l2"><a class="reference internal" href="train_ml.html">Train - Machine Learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="make_submission.html">Submission</a></li>
+<li class="toctree-l2"><a class="reference internal" href="make_train_ml.html">Train - Machine Learning</a></li>
 </ul>
 </li>
 </ul>
 
-                            
-                        
-                    </div>
-                </div>
-                <div class="col-12 col-lg-9">
-                    <div class="document">
-                        
-                            
-  <img alt="_images/banner.jpg" src="_images/banner.jpg" />
-<section id="pytorch-model">
-<h1>Pytorch Model<a class="headerlink" href="#pytorch-model" title="Permalink to this heading">¶</a></h1>
-<section id="custommodel">
-<h2>CustomModel<a class="headerlink" href="#custommodel" title="Permalink to this heading">¶</a></h2>
-<dl class="py class">
-<dt class="sig sig-object py" id="src.models.model.CustomModel">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">src.models.model.</span></span><span class="sig-name descname"><span class="pre">CustomModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.models.model.CustomModel" title="Permalink to this definition">¶</a></dt>
-<dd><p>PyTorch class to define our custom model.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>config</strong> (<em>dict</em>) – Contains all the model configs, also used in W&amp;B logging</p>
-</dd>
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py" id="src.models.model.CustomModel.forward">
-<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#src.models.model.CustomModel.forward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Model forward pass function.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>x</strong> (<em>dict</em>) – Model inputs</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Model output</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>torch.Tensor</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-</section>
-</section>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="documentation.html">Documentation</a><ul>
+      <li>Previous: <a href="dataloader.html" title="previous chapter">Dataloader</a></li>
+      <li>Next: <a href="make_submission.html" title="next chapter">Submission</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
 
 
-                        
-                    </div>
-                </div>
-            </div>
+
+
+
+
+
+
         </div>
-    </div>    
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Baptiste URGELL, Louis REBERGA.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.0.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="_sources/model.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
 
+    
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'./',
-            VERSION:'1.0.0',
-            LANGUAGE:'en',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-    <script type="text/javascript" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/sphinx_highlight.js"></script>
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-  
-    <div class="footer" role="contentinfo">
-        <div class="container">
-            &#169; Copyright 2023, Baptiste URGELL, Louis REBERGA.
-        Created using <a href="http://sphinx-doc.org/">Sphinx</a> 6.1.3.
-        </div>
-    </div>  
-
-</body>
+    
+  </body>
 </html>

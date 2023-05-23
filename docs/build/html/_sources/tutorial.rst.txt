@@ -26,16 +26,16 @@ Create satellite data
 
 .. code-block:: bash
 
-    python src/data/make_data.py
+    make data
 
 Preprocess data
 ===============
 
-- After generating the dataset, run the `process_data.py` script to preprocess and analyze the data.
+- After generating the dataset, run the `make_preprocessing.py` script to preprocess and analyze the data.
 
 .. code-block:: bash
 
-    python src/data/process_data.py
+    make preprocess
 
 Creating a Wandb Sweep
 ======================
@@ -61,7 +61,7 @@ Running the Sweep
 
 .. code-block:: bash
    
-    wandb agent <SWEEP_ID>
+    wandb agent <ORG_NAME>/<PROJECT_NAME>/<SWEEP_ID>
 
 - The agent will start running the sweep runs with different hyperparameter configurations, and wandb will log the results for each run.
 

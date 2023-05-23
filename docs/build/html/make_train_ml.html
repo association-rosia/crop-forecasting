@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Documentation &#8212; Crop forecasting 1.0.0 documentation</title>
+    <title>Train - Machine Learning &#8212; Crop forecasting 1.0.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
@@ -13,8 +13,7 @@
     <script src="_static/sphinx_highlight.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Make Data" href="make_data.html" />
-    <link rel="prev" title="Tutorial" href="tutorial.html" />
+    <link rel="prev" title="Submission" href="make_submission.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -32,32 +31,45 @@
           <div class="body" role="main">
             
   <img alt="_images/banner.jpg" src="_images/banner.jpg" />
-<section id="documentation">
-<h1>Documentation<a class="headerlink" href="#documentation" title="Permalink to this heading">¶</a></h1>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Data</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="make_data.html">Make Data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="make_preprocessing.html">Process Data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="preprocessing.html">Preprocessing</a></li>
-</ul>
-</div>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Deep Learning</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="make_train.html">Train</a></li>
-<li class="toctree-l1"><a class="reference internal" href="trainer.html">Trainer</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dataloader.html">Dataloader</a></li>
-<li class="toctree-l1"><a class="reference internal" href="model.html">Pytorch Model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="make_submission.html">Submission</a></li>
-</ul>
-</div>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Machine Learning</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="make_train_ml.html">Train - Machine Learning</a></li>
-</ul>
-</div>
+<section id="train-machine-learning">
+<h1>Train - Machine Learning<a class="headerlink" href="#train-machine-learning" title="Permalink to this heading">¶</a></h1>
+<section id="init-pipeline">
+<h2>init_pipeline<a class="headerlink" href="#init-pipeline" title="Permalink to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="src.models.ml.make_train.init_pipeline">
+<span class="sig-prename descclassname"><span class="pre">src.models.ml.make_train.</span></span><span class="sig-name descname"><span class="pre">init_pipeline</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Pipeline</span></span></span><a class="headerlink" href="#src.models.ml.make_train.init_pipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialise scikit-learn Pipeline with the wandb configuration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Configured Pipeline.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>Pipeline</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="preprocess-y">
+<h2>preprocess_y<a class="headerlink" href="#preprocess-y" title="Permalink to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="src.models.ml.make_train.preprocess_y">
+<span class="sig-prename descclassname"><span class="pre">src.models.ml.make_train.</span></span><span class="sig-name descname"><span class="pre">preprocess_y</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dataset</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="headerlink" href="#src.models.ml.make_train.preprocess_y" title="Permalink to this definition">¶</a></dt>
+<dd><p>Preprocess target to match processed samples.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>xds</strong> (<em>xr.Dataset</em>) – Dataset containing the target.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Target processed.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
 </section>
 
 
@@ -81,7 +93,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Documentation</a><ul>
+<li class="toctree-l1 current"><a class="reference internal" href="documentation.html">Documentation</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="make_data.html">Make Data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="make_preprocessing.html">Process Data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="preprocessing.html">Preprocessing</a></li>
@@ -90,7 +102,7 @@
 <li class="toctree-l2"><a class="reference internal" href="dataloader.html">Dataloader</a></li>
 <li class="toctree-l2"><a class="reference internal" href="model.html">Pytorch Model</a></li>
 <li class="toctree-l2"><a class="reference internal" href="make_submission.html">Submission</a></li>
-<li class="toctree-l2"><a class="reference internal" href="make_train_ml.html">Train - Machine Learning</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Train - Machine Learning</a></li>
 </ul>
 </li>
 </ul>
@@ -99,8 +111,9 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="tutorial.html" title="previous chapter">Tutorial</a></li>
-      <li>Next: <a href="make_data.html" title="next chapter">Make Data</a></li>
+  <li><a href="documentation.html">Documentation</a><ul>
+      <li>Previous: <a href="make_submission.html" title="previous chapter">Submission</a></li>
+  </ul></li>
   </ul></li>
 </ul>
 </div>
@@ -134,7 +147,7 @@
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
       
       |
-      <a href="_sources/documentation.rst.txt"
+      <a href="_sources/make_train_ml.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

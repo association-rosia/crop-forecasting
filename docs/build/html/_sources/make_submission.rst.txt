@@ -2,7 +2,7 @@
 Submission
 ==========
 
-.. currentmodule:: src.models.submission
+.. currentmodule:: src.models.make_submission
 
 rounded_yield
 -------------

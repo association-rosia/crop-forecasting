@@ -7,21 +7,21 @@ Documentation
     :titlesonly:
 
     make_data
-    process_data
+    make_preprocessing
     preprocessing
 
 .. toctree::
     :caption: Deep Learning
     :titlesonly:
 
-    train
+    make_train
     trainer
     dataloader
     model
-    submission
+    make_submission
 
 .. toctree::
     :caption: Machine Learning
     :titlesonly:
 
-    train_ml
+    make_train_ml

@@ -2,7 +2,7 @@
 Train
 =====
 
-.. currentmodule:: src.models.train
+.. currentmodule:: src.models.make_train
 
 init_wandb
 ----------
