@@ -1,6 +1,6 @@
-=======
-Trainer
-=======
+=======================
+Trainer - Deep Learning
+=======================
 
 .. currentmodule:: src.models.trainer
 

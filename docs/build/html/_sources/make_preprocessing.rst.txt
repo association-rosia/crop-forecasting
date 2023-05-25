@@ -1,6 +1,6 @@
-============
-Process Data
-============
+===============================
+Preprocess Data - Deep Learning
+===============================
 
 .. currentmodule:: src.data.make_preprocessing
 

@@ -1,6 +1,6 @@
-=====
-Train
-=====
+=====================
+Train - Deep Learning
+=====================
 
 .. currentmodule:: src.models.make_train
 

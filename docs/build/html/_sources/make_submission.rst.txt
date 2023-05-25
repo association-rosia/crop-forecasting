@@ -1,6 +1,6 @@
-==========
-Submission
-==========
+===================
+Create a Submission
+===================
 
 .. currentmodule:: src.models.make_submission
 

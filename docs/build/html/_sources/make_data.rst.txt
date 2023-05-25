@@ -1,6 +1,6 @@
-=========
-Make Data
-=========
+==================================
+Download Data - Planetary Computer
+==================================
 
 .. currentmodule:: src.data.make_data
 

@@ -43,6 +43,7 @@ Train the model
 - You can now train the model with the configuration available at the end of the file `make_train.py`.
 
 .. code-block:: bash
+    
     make train
 
 Creating a Wandb Sweep
@@ -69,7 +70,7 @@ Running the Sweep
 
 .. code-block:: bash
    
-    wandb agent <ORG_NAME>/crop-forecasting/<SWEEP_ID>
+        wandb agent <ORG_NAME>/crop-forecasting/<SWEEP_ID>
 
 - The agent will start running the sweep runs with different hyperparameter configurations, and wandb will log the results for each run.
 
