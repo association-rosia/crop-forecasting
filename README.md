@@ -2,11 +2,13 @@
 
 ## Project Description
 
-The project "2023 EY Open Science Data Challenge - Crop Forecasting" is a data science project conducted as part of the challenge proposed by EY, Microsoft, and Cornell University. The objective of this project is to predict the profitability of rice fields using satellite image data provided by Microsoft Planetary, Meteorological data, and Field data.
+The project 2023 EY Open Science Data Challenge - Crop Forecasting is a Data Science project conducted as part of the challenge proposed by EY, Microsoft, and Cornell University. The objective of this project is to predict the yield of rice fields using satellite image data provided by Microsoft Planetary, meteorological data, and field data.
+
+## Our model architecture
 
 ## Documentation
 
-The project documentation, generated using Sphinx, can be found in the `docs/` directory. It provides detailed information about the project's setup, usage, implementation, tutorial, .
+The project documentation, generated using Sphinx, can be found in the `docs/` directory. It provides detailed information about the project's setup, usage, implementation, tutorial.
 
 
 ## Directory Structure
