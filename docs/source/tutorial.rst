@@ -26,16 +26,25 @@ Create satellite data
 
 .. code-block:: bash
 
-    python src/data/make_data.py
+    make data
 
 Preprocess data
 ===============
 
-- After generating the dataset, run the `process_data.py` script to preprocess and analyze the data.
+- After generating the dataset, run the `make_preprocessing.py` script to preprocess and analyze the data.
 
 .. code-block:: bash
 
-    python src/data/process_data.py
+    make preprocess
+
+Train the model
+===============
+
+- You can now train the model with the configuration available at the end of the file `make_train.py`.
+
+.. code-block:: bash
+    
+    make train
 
 Creating a Wandb Sweep
 ======================
@@ -53,7 +62,7 @@ Running the Sweep
 
 .. code-block:: bash
    
-    wandb sweep --project crop_forecasting sweep.yaml
+    wandb sweep --project crop-forecasting sweep.yaml
 
 - This will generate a sweep ID, which you can use to launch the sweep runs.
 
@@ -61,7 +70,7 @@ Running the Sweep
 
 .. code-block:: bash
    
-    wandb agent <SWEEP_ID>
+        wandb agent <ORG_NAME>/crop-forecasting/<SWEEP_ID>
 
 - The agent will start running the sweep runs with different hyperparameter configurations, and wandb will log the results for each run.
 

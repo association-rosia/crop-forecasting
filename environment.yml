@@ -13,16 +13,14 @@ dependencies:
   - scikit-learn
   - rich
   - ipywidgets
-  - pytorch-lightning=2.0.0
+  - pytorch::pytorch
   - pip:
     - xarray-spatial
     - odc-stac
     - rioxarray
-    - optuna
     - pystac
     - ipyleaflet
     - stackstac
     - pystac-client
     - planetary-computer
-    - torch
     - wandb

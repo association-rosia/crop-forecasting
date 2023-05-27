@@ -1,0 +1,61 @@
+method: bayes
+
+metric:
+  name: val_r2_score
+  goal: maximize
+
+program: src/models/make_train.py
+
+parameters:
+    epochs:
+      distribution: constant
+      value: 20
+    
+    batch_size:
+      distribution: categorical
+      values: [16, 32, 64]
+
+    learning_rate:
+      distribution: uniform
+      min: 0.00001
+      max: 0.001
+
+    scheduler_patience:
+      distribution: int_uniform
+      min: 3
+      max: 9
+            
+    s_hidden_size:
+      distribution: int_uniform
+      min: 64
+      max: 256
+
+    m_hidden_size:
+      distribution: int_uniform
+      min: 64
+      max: 256
+               
+    s_num_layers:
+      distribution: int_uniform
+      min: 1
+      max: 2
+
+    m_num_layers:
+      distribution: int_uniform
+      min: 1
+      max: 2
+                
+    c_out_in_features_1:
+      distribution: int_uniform
+      min: 64
+      max: 256
+    
+    c_out_in_features_2:
+      distribution: int_uniform
+      min: 64
+      max: 256
+
+    dropout:
+      distribution: uniform
+      min: 0.
+      max: 0.8
