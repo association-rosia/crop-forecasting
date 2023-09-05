@@ -21,6 +21,6 @@ Nazir, A., Ullah, S., Saqib, Z. A., Abbas, A., Ali, A., Iqbal, M. S., ... & Butt
 
 ## Contributors
 
-<a href="https://www.linkedin.com/in/baptiste-urgell/"><img src="https://static.licdn.com/sc/h/8s162nmbcnfkg7a0k8nq9wwqo"/></a> Baptiste URGELL 
+<a href="https://www.linkedin.com/in/baptiste-urgell/"><img src="https://static.licdn.com/sc/h/akt4ae504epesldzj74dzred8"/></a> Baptiste URGELL 
 
 ![alt text](https://cdn-icons-png.flaticon.com/16/3536/3536505.png) Louis REBERGA
