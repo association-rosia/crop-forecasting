@@ -19,6 +19,19 @@ Jeong, S., Ko, J., & Yeom, J. M. (2022). Predicting rice yield at pixel scale th
 
 Nazir, A., Ullah, S., Saqib, Z. A., Abbas, A., Ali, A., Iqbal, M. S., ... & Butt, M. U. (2021). Estimation and forecasting of rice yield using phenology-based algorithm and linear regression model on sentinel-ii satellite data. Agriculture, 11(10), 1026.
 
+## 📝 Citing
+
+```
+@misc{UrgellReberga:2023,
+  Author = {Baptiste Urgell and Louis Reberga},
+  Title = {Crop forecasting},
+  Year = {2023},
+  Publisher = {GitHub},
+  Journal = {GitHub repository},
+  Howpublished = {\url{https://github.com/association-rosia/crop-forecasting}}
+}
+```
+
 ## 🛡️ License
 
 Project is distributed under [MIT License](https://github.com/association-rosia/crop-forecasting/blob/main/LICENSE)
