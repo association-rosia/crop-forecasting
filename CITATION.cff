@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "URGELL"
+  given-names: "Baptiste"
+- family-names: "REBERGA"
+  given-names: "Louis"
+title: "GitHub repository"
+publisher: "Github"
+year: "2023"
+version: 1.0
+date-released: 2023-4-9
+url: "https://github.com/association-rosia/crop-forecasting"
+data: "Crop Yield Data - EY"
