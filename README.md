@@ -1,14 +1,22 @@
-# 2023 EY Open Science Data Challenge - Crop forecasting
+# 🍚 2023 EY Open Science Data Challenge - Crop forecasting
 <img src='assets/header.png' alt=''>
 
-## 🍚 Project Description
 The project 2023 EY Open Science Data Challenge - Crop Forecasting is a Data Science project conducted as part of the challenge proposed by EY, Microsoft, and Cornell University. The objective of this project is to predict the yield of rice fields using satellite image data provided by Microsoft Planetary, meteorological data, and field data.
 
-## 🤖 Model architecture
-<img src='assets/model.png' alt='' width='66%'>
+## 🏆 Challenge ranking
+The score of the challenge was the R2 score. 
+Our solution was the 4th one with a R2 score equal to 0.66 🎉.
 
-## 👨🏻‍🔧 Data pre-processing
+The podium:  
+🥇 Outatime - 0.68
+🥈 Joshua Rexmond Nunoo Otoo - 0.68
+🥉 Amma Simmons - 0.67
+
+## 🛠️ Data processing
 <img src='assets/smoothing.png' alt='' width='66%'>
+
+## 🏛️ Model architecture
+<img src='assets/model.png' alt='' width='66%'>
 
 ## 📚 Documentation
 The project documentation, generated using Sphinx, can be found in the `docs/` directory. It provides detailed information about the project's setup, usage, implementation, tutorial.
