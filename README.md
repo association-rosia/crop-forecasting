@@ -5,7 +5,7 @@ The project 2023 EY Open Science Data Challenge - Crop Forecasting is a Data Sci
 
 ## 🏆 Challenge ranking
 The score of the challenge was the R2 score.  
-Our solution was the 4th one with a R2 score equal to 0.66 🎉.
+Our solution was the 4th (out of 185 teams) one with a R2 score equal to 0.66 🎉.
 
 The podium:  
 🥇 Outatime - 0.68  
