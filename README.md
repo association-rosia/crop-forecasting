@@ -8,9 +8,9 @@ The score of the challenge was the R2 score.
 Our solution was the 4th one with a R2 score equal to 0.66 🎉.
 
 The podium:  
-🥇 Outatime - 0.68
-🥈 Joshua Rexmond Nunoo Otoo - 0.68
-🥉 Amma Simmons - 0.67
+🥇 Outatime - 0.68  
+🥈 Joshua Rexmond Nunoo Otoo - 0.68  
+🥉 Amma Simmons - 0.67  
 
 ## 🛠️ Data processing
 <img src='assets/smoothing.png' alt='' width='66%'>
